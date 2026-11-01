@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { newStore, openWorkoutSheet, renderApp, seedWorkout, setToday } from './harness'
+import { newStore, type App, openWorkoutSheet, renderApp, seedWorkout, setToday } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -27,8 +27,6 @@ async function setup() {
   await app.screen.findByRole('button', { name: 'Workout actions' })
   return app
 }
-
-type App = Awaited<ReturnType<typeof setup>>
 
 async function copyTo(app: App, dates: string[], actualsAsTargets = false) {
   const { user, screen } = app

@@ -1,12 +1,12 @@
 import { fireEvent, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { did, newStore, openWorkoutSheet, plan, renderApp, seedWorkout, setToday } from './harness'
+import { did, newStore, openWorkoutSheet, plan, renderApp, seedWorkout, setToday, type App } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
 })
 
-type Screen = Awaited<ReturnType<typeof renderApp>>['screen']
+type Screen = App['screen']
 
 function stripDays(screen: Screen) {
   return screen.getAllByRole('button', { name: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) / })
@@ -98,6 +98,18 @@ describe('week view', () => {
     fireEvent.touchEnd(view, { changedTouches: [{ clientX: 300 }] })
     expect(await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
   })
+  it('keeps the week when swiping inside an open sheet', async () => {
+    setToday('2026-11-04')
+    const { user, screen } = await renderApp(newStore())
+
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    const sheet = screen.getByRole('dialog', { name: 'Settings' })
+    fireEvent.touchStart(sheet, { touches: [{ clientX: 300 }] })
+    fireEvent.touchEnd(sheet, { changedTouches: [{ clientX: 100 }] })
+
+    expect(screen.getByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Nov 9 – Nov 15' })).not.toBeInTheDocument()
+  })
   it('marks done workouts and past planned workouts as not done', async () => {
     setToday('2026-11-04')
     const store = newStore()
@@ -153,6 +165,16 @@ describe('week view', () => {
     expect(screen.getByRole('button', { name: 'Wed Nov 4' })).toHaveAccessibleDescription('Planned')
     expect(screen.getByRole('button', { name: 'Fri Nov 6' })).toHaveAccessibleDescription('Planned')
     expect(screen.getByRole('button', { name: 'Thu Nov 5' })).toHaveAccessibleDescription('')
+  })
+
+  it('marks a day mixing a done and a missed workout as missed', async () => {
+    setToday('2026-11-04')
+    const store = newStore()
+    await seedWorkout(store, { date: '2026-11-02', name: 'Done Push', status: 'done' })
+    await seedWorkout(store, { date: '2026-11-02', name: 'Skipped Pull' })
+    const { screen } = await renderApp(store)
+
+    expect(await screen.findByRole('button', { name: 'Mon Nov 2' })).toHaveAccessibleDescription('Missed')
   })
 
   it('adds a workout to the selected day and opens it', async () => {

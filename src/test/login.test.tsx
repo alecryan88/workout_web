@@ -61,7 +61,7 @@ describe('login', () => {
     const { user, screen } = await renderApp(newStore())
 
     await user.click(await screen.findByRole('button', { name: 'Settings' }))
-    await user.click(screen.getByTestId('sheet-backdrop'))
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
 
     expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()

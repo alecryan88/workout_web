@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { longWeekday } from './dates'
-import type { WorkoutSummary } from './store/types'
+import { isMissed, type WorkoutSummary } from './store/types'
 
 type Props = {
   date: string
@@ -17,7 +17,7 @@ export default function DayWorkouts({ date, today, workouts, onAdd }: Props) {
       {workouts && dayWorkouts.length === 0 && <p className="rest">Rest day</p>}
       <ul>
         {dayWorkouts.map((w) => {
-          const missed = w.status === 'planned' && w.date < today
+          const missed = isMissed(w, today)
           return (
             <li key={w.id}>
               <Link to={`/workout/${w.id}`} className={`workout-chip card ${w.status}${missed ? ' missed' : ''}`}>

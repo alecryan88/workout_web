@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { isLogged, type Exercise, type LastPerformance, type Store, type Workout, type WorkoutStatus, type WorkoutSummary } from './types'
+import { summaryCounts, type Exercise, type LastPerformance, type Store, type Workout, type WorkoutStatus, type WorkoutSummary } from './types'
 
 type SetRow = {
   position: number
@@ -68,15 +68,16 @@ export function createSupabaseStore(url: string, key: string): Store {
           .order('date')
           .order('created_at'),
       )
-      return rows.map(({ workout_exercises, ...workout }): WorkoutSummary => {
-        const sets = workout_exercises.flatMap((e) => e.sets)
-        return {
+      return rows.map(
+        ({ workout_exercises, ...workout }): WorkoutSummary => ({
           ...workout,
-          exerciseCount: workout_exercises.length,
-          setCount: sets.length,
-          loggedSetCount: sets.filter((s) => isLogged({ actualReps: s.actual_reps, actualWeight: s.actual_weight })).length,
-        }
-      })
+          ...summaryCounts(
+            workout_exercises.map((e) => ({
+              sets: e.sets.map((s) => ({ actualReps: s.actual_reps, actualWeight: s.actual_weight })),
+            })),
+          ),
+        }),
+      )
     },
     async getWorkout(id) {
       const row = check<WorkoutRow | null>(

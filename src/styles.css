@@ -11,6 +11,7 @@
   --done-tint: #e8f8ec;
   --missed: #aeaeb2;
   --danger: #ff3b30;
+  --backdrop: rgba(0, 0, 0, 0.4);
   --radius: 12px;
   --radius-card: 18px;
   --tap: 48px;
@@ -41,6 +42,7 @@
     --done-tint: #13301c;
     --missed: #636366;
     --danger: #ff453a;
+    --backdrop: rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -459,7 +461,7 @@ label.checkbox input {
   height: 26px;
   border-radius: 50%;
   background: var(--done);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.85rem;
   font-weight: 700;
 }
@@ -806,8 +808,16 @@ input[type='number'] {
 .sheet-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: var(--backdrop);
   animation: sheet-fade 200ms ease-out;
+}
+
+.sheet-backdrop:active {
+  opacity: 1;
 }
 
 .sheet {

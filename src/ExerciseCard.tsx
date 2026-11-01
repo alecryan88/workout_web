@@ -90,7 +90,9 @@ export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, expa
               <span className="visually-hidden">All sets logged</span>
             </span>
           ) : (
-            <span className="exercise-progress">{`${loggedCount}/${entry.sets.length} sets`}</span>
+            <span className="exercise-progress">
+              {entry.sets.length === 0 ? 'No sets' : `${loggedCount}/${entry.sets.length} sets`}
+            </span>
           )}
           {lastLine && <span className="last">{lastLine}</span>}
         </p>

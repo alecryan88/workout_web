@@ -23,6 +23,8 @@ export async function renderApp(store: Store) {
   return { user, screen }
 }
 
+export type App = Awaited<ReturnType<typeof renderApp>>
+
 type SeedSet = { target?: [number | null, number | null]; actual?: [number | null, number | null] }
 
 type SeedWorkout = {
@@ -55,17 +57,17 @@ export async function seedWorkout(store: Store, seed: SeedWorkout) {
 export const did = (reps: number | null, weight: number | null = null): SeedSet => ({ actual: [reps, weight] })
 export const plan = (reps: number | null, weight: number | null = null): SeedSet => ({ target: [reps, weight] })
 
-export async function openWorkoutSheet(app: Awaited<ReturnType<typeof renderApp>>, item: 'Edit details' | 'Copy' | 'Delete') {
+export async function openWorkoutSheet(app: App, item: 'Edit details' | 'Copy' | 'Delete') {
   await app.user.click(app.screen.getByRole('button', { name: 'Workout actions' }))
   await app.user.click(app.screen.getByRole('button', { name: item }))
 }
 
-export async function addExercise(app: Awaited<ReturnType<typeof renderApp>>, name: string) {
+export async function addExercise(app: App, name: string) {
   await app.user.click(await app.screen.findByRole('button', { name: '+ Add exercise' }))
   await app.user.type(app.screen.getByLabelText('Add exercise'), `${name}{Enter}`)
 }
 
-export async function exerciseAction(app: Awaited<ReturnType<typeof renderApp>>, exercise: string, action: string) {
+export async function exerciseAction(app: App, exercise: string, action: string) {
   await app.user.click(app.screen.getByRole('button', { name: `Actions for ${exercise}` }))
   await app.user.click(app.screen.getByRole('button', { name: action }))
 }

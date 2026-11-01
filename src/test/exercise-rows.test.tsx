@@ -1,6 +1,6 @@
 import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { did, exerciseAction, newStore, plan, renderApp, seedWorkout, setToday } from './harness'
+import { did, exerciseAction, newStore, plan, renderApp, seedWorkout, setToday, type App } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -19,10 +19,17 @@ async function openWorkout(seed: Omit<Seed, 'date' | 'name'>, history: Seed[] = 
   return app
 }
 
-const row = (screen: Awaited<ReturnType<typeof renderApp>>['screen'], name: string) =>
+const row = (screen: App['screen'], name: string) =>
   within(screen.getByRole('region', { name }))
 
 describe('collapsed exercise rows', () => {
+  it('says an exercise with no sets has no sets', async () => {
+    const { screen } = await openWorkout({ exercises: { 'Bench Press': [plan(5)], Plank: [] } })
+
+    expect(row(screen, 'Plank').getByText('No sets')).toBeInTheDocument()
+    expect(row(screen, 'Plank').queryByText('0/0 sets')).not.toBeInTheDocument()
+  })
+
   it('shows logged progress, a done state and the last performance line', async () => {
     const { screen } = await openWorkout(
       {

@@ -31,6 +31,10 @@ function DateInput({ value, onChange }: { value: string; onChange: (value: strin
   )
 }
 
+type EditorSheet = 'none' | 'actions' | 'details' | 'copy' | 'delete'
+
+const weekUrl = (workout: Workout | null) => (workout ? `/?week=${startOfWeek(workout.date)}&day=${workout.date}` : '/')
+
 function initiallyExpanded(workout: Workout) {
   if (workout.status === 'done') return null
   const index = workout.exercises.findIndex((entry) => entry.sets.some((set) => !isLogged(set)))
@@ -44,7 +48,7 @@ export default function WorkoutEditor() {
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<number | null>(null)
-  const [sheet, setSheet] = useState<'none' | 'actions' | 'details' | 'copy' | 'delete'>('none')
+  const [sheet, setSheet] = useState<EditorSheet>('none')
   const autosave = useAutosave((w: Workout) => store.saveWorkout(w))
 
   useEffect(() => {
@@ -98,12 +102,12 @@ export default function WorkoutEditor() {
   const remove = async () => {
     await autosave.flush()
     await store.deleteWorkout(id)
-    navigate(workout ? `/?week=${startOfWeek(workout.date)}&day=${workout.date}` : '/')
+    navigate(weekUrl(workout))
   }
 
   const backToWeek = async () => {
     await autosave.flush()
-    navigate(workout ? `/?week=${startOfWeek(workout.date)}&day=${workout.date}` : '/')
+    navigate(weekUrl(workout))
   }
 
   if (loadError) {
