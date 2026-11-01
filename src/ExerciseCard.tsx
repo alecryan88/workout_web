@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import NumberInput from './NumberInput'
 import { useStore } from './store/context'
-import type { SetEntry, WorkoutExercise } from './store/types'
+import { isLogged, type SetEntry, type WorkoutExercise } from './store/types'
 import { summarisePerformance } from './summary'
 
 type Props = {
@@ -15,8 +15,6 @@ type Props = {
   onRemove: () => void
   onMove: (direction: -1 | 1) => void
 }
-
-export const isLogged = (set: SetEntry) => set.actualReps !== null || set.actualWeight !== null
 
 const emptySet: SetEntry = { targetReps: null, targetWeight: null, actualReps: null, actualWeight: null }
 

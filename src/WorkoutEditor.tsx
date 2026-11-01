@@ -3,10 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { startOfWeek } from './dates'
 import { useStore } from './store/context'
 import CopyPanel from './CopyPanel'
-import ExerciseCard, { isLogged } from './ExerciseCard'
+import ExerciseCard from './ExerciseCard'
 import ExercisePicker from './ExercisePicker'
 import Sheet from './Sheet'
-import type { Workout, WorkoutExercise } from './store/types'
+import { isLogged, type Workout, type WorkoutExercise } from './store/types'
 import { useAutosave, type SaveState } from './useAutosave'
 
 const SAVE_LABELS: Record<SaveState, string> = {
