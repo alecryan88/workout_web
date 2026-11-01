@@ -40,3 +40,17 @@ export function monthDay(iso: string): string {
 export function dayLabel(iso: string): string {
   return `${WEEKDAYS[fromIso(iso).getDay()]} ${monthDay(iso)}`
 }
+
+const LONG_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+export function shortWeekday(iso: string): string {
+  return WEEKDAYS[fromIso(iso).getDay()]
+}
+
+export function longWeekday(iso: string): string {
+  return LONG_WEEKDAYS[fromIso(iso).getDay()]
+}
+
+export function dayNumber(iso: string): number {
+  return fromIso(iso).getDate()
+}

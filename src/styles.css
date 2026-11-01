@@ -223,8 +223,6 @@ label.checkbox input {
   width: 100%;
 }
 
-.week-header,
-.day-header,
 .exercise-header {
   display: flex;
   align-items: center;
@@ -232,46 +230,104 @@ label.checkbox input {
   gap: 8px;
 }
 
-.week-actions {
+.week-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 4px 0 12px;
+  min-height: var(--tap);
 }
 
-.week-actions :only-child {
-  margin-left: auto;
+.toolbar-slot {
+  display: flex;
+  min-width: var(--tap);
 }
 
-.day {
-  background: var(--card);
-  border-radius: var(--radius-card);
-  padding: 10px 8px 10px 16px;
-  margin-bottom: 12px;
+.toolbar-slot.end {
+  justify-content: flex-end;
 }
 
-.day h2 {
-  font-size: 1rem;
+.week-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.day.today {
-  box-shadow: inset 4px 0 0 var(--accent);
+.week-title h1 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  text-align: center;
 }
 
-.day.today h2 {
+.week-title button.icon {
+  color: var(--accent);
+  font-size: 1.75rem;
+}
+
+.day-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin: 8px 0 20px;
+}
+
+.strip-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: auto;
+  padding: 4px 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.strip-weekday {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.strip-number {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.strip-day.today .strip-number,
+.strip-day.today .strip-weekday {
   color: var(--accent);
 }
 
-.day ul {
+.strip-day.selected .strip-number {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.strip-day.today.selected .strip-number {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.day-workouts h2 {
+  margin-bottom: 12px;
+}
+
+.day-workouts ul {
   list-style: none;
-  margin: 0;
-  padding: 0 8px 0 0;
+  margin: 0 0 12px;
+  padding: 0;
   display: grid;
-  gap: 6px;
+  gap: 12px;
 }
 
 .rest {
-  margin: 0 0 4px;
+  margin: 0 0 16px;
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
@@ -282,11 +338,15 @@ label.checkbox input {
   align-items: center;
   min-height: var(--tap);
   padding: 0 14px;
-  border-radius: var(--radius);
-  background: var(--bg);
+  border-radius: var(--radius-card);
+  background: var(--card);
   color: var(--text);
   text-decoration: none;
   font-weight: 600;
+}
+
+button.add-workout {
+  width: 100%;
 }
 
 .workout-chip.done .badge {

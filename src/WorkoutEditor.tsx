@@ -78,12 +78,12 @@ export default function WorkoutEditor() {
   const remove = async () => {
     await autosave.flush()
     await store.deleteWorkout(id)
-    navigate(workout ? `/?week=${startOfWeek(workout.date)}` : '/')
+    navigate(workout ? `/?week=${startOfWeek(workout.date)}&day=${workout.date}` : '/')
   }
 
   const backToWeek = async () => {
     await autosave.flush()
-    navigate(workout ? `/?week=${startOfWeek(workout.date)}` : '/')
+    navigate(workout ? `/?week=${startOfWeek(workout.date)}&day=${workout.date}` : '/')
   }
 
   if (loadError) {

@@ -12,7 +12,7 @@ describe('login', () => {
     const { screen } = await renderApp(newStore(false))
 
     expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: /week of/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Nov 2 – Nov 8' })).not.toBeInTheDocument()
   })
 
   it('shows an error for a wrong password', async () => {
@@ -34,7 +34,7 @@ describe('login', () => {
     await user.type(screen.getByLabelText('Password'), PASSWORD)
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
-    expect(await screen.findByRole('heading', { name: /week of/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
 
     expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Settings' }))
@@ -52,7 +52,7 @@ describe('login', () => {
     await user.click(within(sheet).getByRole('button', { name: 'Cancel' }))
 
     expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /week of/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Log in' })).not.toBeInTheDocument()
   })
 
@@ -64,6 +64,6 @@ describe('login', () => {
     await user.click(screen.getByTestId('sheet-backdrop'))
 
     expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /week of/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
   })
 })
