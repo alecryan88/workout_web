@@ -4,6 +4,7 @@ import DayStrip from './DayStrip'
 import DayWorkouts from './DayWorkouts'
 import WeekHeader from './WeekHeader'
 import { addDays, startOfWeek, today, weekDays } from './dates'
+import Sheet from './Sheet'
 import { useStore } from './store/context'
 import type { WorkoutSummary } from './store/types'
 
@@ -23,6 +24,7 @@ export default function WeekView({ onSignOut }: Props) {
   const [error, setError] = useState<string | null>(null)
   const touchStart = useRef<number | null>(null)
   const navigate = useNavigate()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const addWorkout = async () => {
     try {
@@ -75,11 +77,16 @@ export default function WeekView({ onSignOut }: Props) {
         onPrevious={() => goTo(addDays(monday, -7))}
         onNext={() => goTo(addDays(monday, 7))}
         trailing={
-          <button type="button" className="link-button" onClick={onSignOut}>
-            Log out
+          <button type="button" className="icon gear" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
+            ⚙
           </button>
         }
       />
+      <Sheet open={settingsOpen} title="Settings" onClose={() => setSettingsOpen(false)}>
+        <button type="button" className="danger" onClick={onSignOut}>
+          Log out
+        </button>
+      </Sheet>
       <DayStrip days={days} selected={selected} today={todayIso} onSelect={select} />
       {error && <p role="alert" className="error">{error}</p>}
       <DayWorkouts date={selected} today={todayIso} workouts={workouts} onAdd={addWorkout} />

@@ -1,3 +1,4 @@
+import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EMAIL, PASSWORD, newStore, renderApp, setToday } from './harness'
 
@@ -35,7 +36,34 @@ describe('login', () => {
 
     expect(await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Log out' }))
+    expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    const sheet = screen.getByRole('dialog', { name: 'Settings' })
+    await user.click(within(sheet).getByRole('button', { name: 'Log out' }))
     expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument()
+  })
+
+  it('can close the settings sheet without logging out', async () => {
+    setToday('2026-11-04')
+    const { user, screen } = await renderApp(newStore())
+
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    const sheet = screen.getByRole('dialog', { name: 'Settings' })
+    await user.click(within(sheet).getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Log in' })).not.toBeInTheDocument()
+  })
+
+  it('closes the settings sheet when the backdrop is tapped', async () => {
+    setToday('2026-11-04')
+    const { user, screen } = await renderApp(newStore())
+
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    await user.click(screen.getByTestId('sheet-backdrop'))
+
+    expect(screen.queryByRole('dialog', { name: 'Settings' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
   })
 })
