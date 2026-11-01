@@ -1,6 +1,6 @@
-import { fireEvent } from '@testing-library/react'
+import { fireEvent, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { newStore, openWorkoutSheet, renderApp, setToday } from './harness'
+import { did, newStore, openWorkoutSheet, plan, renderApp, seedWorkout, setToday } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -111,6 +111,48 @@ describe('week view', () => {
     await user.click(screen.getByRole('button', { name: 'Mon Nov 2' }))
     expect(await screen.findByRole('link', { name: /Done Push/ })).toHaveTextContent(/done/i)
     expect(screen.getByRole('link', { name: /Missed Pull/ })).toHaveTextContent(/not done/i)
+  })
+
+  it('shows exercise and logged set counts with progress on each card', async () => {
+    setToday('2026-11-04')
+    const store = newStore()
+    await seedWorkout(store, {
+      date: '2026-11-04',
+      name: 'Push Day',
+      exercises: {
+        'Bench Press': [did(5, 100), did(null, 100), plan(5, 100)],
+        'Overhead Press': [did(8), plan(8), plan(8)],
+      },
+    })
+    await store.createWorkout('2026-11-04', 'Empty Session')
+    const { screen } = await renderApp(store)
+
+    const push = await screen.findByRole('link', { name: /Push Day/ })
+    expect(push).toHaveTextContent('2 exercises · 3/6 sets')
+    expect(within(push).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '3')
+    expect(within(push).getByRole('progressbar')).toHaveAttribute('aria-valuemax', '6')
+    expect(screen.getByRole('link', { name: /Empty Session/ })).toHaveTextContent('0 exercises · 0/0 sets')
+  })
+
+  it('marks each day with workouts by whether they are done, missed or planned', async () => {
+    setToday('2026-11-04')
+    const store = newStore()
+    const doneMon = await store.createWorkout('2026-11-02', 'Done Push')
+    await store.setStatus(doneMon, 'done')
+    const doneTue = await store.createWorkout('2026-11-03', 'Done Pull')
+    await store.setStatus(doneTue, 'done')
+    await store.createWorkout('2026-11-03', 'Missed Legs')
+    await store.createWorkout('2026-11-04', 'Today Run')
+    const doneFri = await store.createWorkout('2026-11-06', 'Done Early')
+    await store.setStatus(doneFri, 'done')
+    await store.createWorkout('2026-11-06', 'Planned Swim')
+    const { screen } = await renderApp(store)
+
+    expect(await screen.findByRole('button', { name: 'Mon Nov 2' })).toHaveAccessibleDescription('All done')
+    expect(screen.getByRole('button', { name: 'Tue Nov 3' })).toHaveAccessibleDescription('Missed')
+    expect(screen.getByRole('button', { name: 'Wed Nov 4' })).toHaveAccessibleDescription('Planned')
+    expect(screen.getByRole('button', { name: 'Fri Nov 6' })).toHaveAccessibleDescription('Planned')
+    expect(screen.getByRole('button', { name: 'Thu Nov 5' })).toHaveAccessibleDescription('')
   })
 
   it('adds a workout to the selected day and opens it', async () => {
