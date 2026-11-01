@@ -1,4 +1,3 @@
-import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { newStore, renderApp, seedWorkout, setToday } from './harness'
 
@@ -23,6 +22,7 @@ async function setup() {
     },
   })
   const app = await renderApp(store)
+  await app.user.click(await app.screen.findByRole('button', { name: 'Mon Nov 2' }))
   await app.user.click(await app.screen.findByRole('link', { name: /Push Day/ }))
   await app.screen.findByLabelText('Workout name')
   return app
@@ -43,15 +43,15 @@ async function copyTo(app: App, dates: string[], actualsAsTargets = false) {
   expect(await screen.findByText(`Copied to ${count}`)).toBeInTheDocument()
 }
 
-async function openOn(app: App, weekOf: string, dayName: string) {
+async function openOn(app: App, weekTitle: string, dayName: string) {
   const { user, screen } = app
   await user.click(screen.getByRole('button', { name: 'Back to week' }))
-  await screen.findByRole('heading', { name: 'Week of Nov 2' })
-  while (!screen.queryByRole('heading', { name: `Week of ${weekOf}` })) {
+  await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })
+  while (!screen.queryByRole('heading', { name: weekTitle })) {
     await user.click(screen.getByRole('button', { name: 'Next week' }))
   }
-  const day = within(screen.getByRole('region', { name: dayName }))
-  const link = await day.findByRole('link', { name: /Push Day/ })
+  await user.click(screen.getByRole('button', { name: dayName }))
+  const link = await screen.findByRole('link', { name: /Push Day/ })
   expect(link).not.toHaveTextContent(/done/i)
   await user.click(link)
   await screen.findByLabelText('Workout name')
@@ -62,7 +62,7 @@ describe('copying a workout', () => {
     const app = await setup()
     await copyTo(app, ['2026-11-09', '2026-11-16'])
 
-    await openOn(app, 'Nov 16', 'Mon Nov 16')
+    await openOn(app, 'Nov 16 – Nov 22', 'Mon Nov 16')
     const { screen } = app
     expect(screen.getByLabelText('Workout name')).toHaveValue('Push Day')
     expect(screen.getByLabelText('Notes')).toHaveValue('Pause reps')
@@ -75,14 +75,16 @@ describe('copying a workout', () => {
 
     await app.user.click(screen.getByRole('button', { name: 'Back to week' }))
     await app.user.click(await screen.findByRole('button', { name: 'Previous week' }))
-    expect(await within(screen.getByRole('region', { name: 'Mon Nov 9' })).findByRole('link', { name: /Push Day/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Nov 9 – Nov 15' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: "Monday's workouts" })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /Push Day/ })).toBeInTheDocument()
   })
 
   it('can use the actuals as the new targets', async () => {
     const app = await setup()
     await copyTo(app, ['2026-11-09'], true)
 
-    await openOn(app, 'Nov 9', 'Mon Nov 9')
+    await openOn(app, 'Nov 9 – Nov 15', 'Mon Nov 9')
     const { screen } = app
     expect(screen.getByLabelText('Bench Press set 1 target reps')).toHaveValue(6)
     expect(screen.getByLabelText('Bench Press set 2 target weight')).toHaveValue(180)
@@ -102,8 +104,9 @@ describe('deleting a workout', () => {
     await user.click(screen.getByRole('button', { name: 'Delete workout' }))
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
-    expect(await screen.findByRole('heading', { name: 'Week of Nov 2' })).toBeInTheDocument()
-    expect(await within(screen.getByRole('region', { name: 'Mon Nov 2' })).findByText('Rest')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: "Monday's workouts" })).toBeInTheDocument()
+    expect(await screen.findByText('Rest day')).toBeInTheDocument()
     expect(screen.queryByText('Push Day')).not.toBeInTheDocument()
   })
 })

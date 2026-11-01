@@ -1,4 +1,3 @@
-import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { newStore, renderApp, setToday } from './harness'
 
@@ -73,14 +72,15 @@ describe('logging at the gym', () => {
     await user.type(screen.getByLabelText('Notes'), 'Edited after done')
 
     await user.click(screen.getByRole('button', { name: 'Back to week' }))
-    const wednesday = within(await screen.findByRole('region', { name: 'Wed Nov 4' }))
-    expect(await wednesday.findByRole('link', { name: /Push Day/ })).toHaveTextContent(/done/i)
+    expect(await screen.findByRole('heading', { name: "Today's workouts" })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /Push Day/ })).toHaveTextContent(/done/i)
 
-    await user.click(wednesday.getByRole('link', { name: /Push Day/ }))
+    await user.click(screen.getByRole('link', { name: /Push Day/ }))
     expect(await screen.findByLabelText('Notes')).toHaveValue('Edited after done')
     await user.click(screen.getByRole('button', { name: 'Mark not done' }))
     await user.click(screen.getByRole('button', { name: 'Back to week' }))
-    const link = await within(await screen.findByRole('region', { name: 'Wed Nov 4' })).findByRole('link', { name: /Push Day/ })
+    expect(await screen.findByRole('heading', { name: "Today's workouts" })).toBeInTheDocument()
+    const link = await screen.findByRole('link', { name: /Push Day/ })
     expect(link).not.toHaveTextContent(/done/i)
   })
 })

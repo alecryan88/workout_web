@@ -1,4 +1,3 @@
-import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { newStore, renderApp, setToday } from './harness'
 
@@ -11,15 +10,16 @@ describe('creating and editing a workout', () => {
     setToday('2026-11-04')
     const { user, screen } = await renderApp(newStore())
 
-    await user.click(await screen.findByRole('button', { name: 'Add workout to Thu Nov 5' }))
+    await user.click(await screen.findByRole('button', { name: 'Thu Nov 5' }))
+    await user.click(screen.getByRole('button', { name: 'Add workout' }))
     const name = await screen.findByLabelText('Workout name')
     await user.clear(name)
     await user.type(name, 'Push Day')
     await user.type(screen.getByLabelText('Notes'), 'Felt strong')
     await user.click(screen.getByRole('button', { name: 'Back to week' }))
 
-    const thursday = within(await screen.findByRole('region', { name: 'Thu Nov 5' }))
-    await user.click(await thursday.findByRole('link', { name: /Push Day/ }))
+    expect(await screen.findByRole('heading', { name: "Thursday's workouts" })).toBeInTheDocument()
+    await user.click(await screen.findByRole('link', { name: /Push Day/ }))
 
     expect(await screen.findByLabelText('Workout name')).toHaveValue('Push Day')
     expect(screen.getByLabelText('Notes')).toHaveValue('Felt strong')
@@ -43,14 +43,15 @@ describe('creating and editing a workout', () => {
     await store.createWorkout('2026-11-02', 'Push Day')
     const { user, screen } = await renderApp(store)
 
+    await user.click(await screen.findByRole('button', { name: 'Mon Nov 2' }))
     await user.click(await screen.findByRole('link', { name: /Push Day/ }))
     const date = await screen.findByLabelText('Date')
     await user.clear(date)
     await user.type(date, '2026-11-10')
     await user.click(screen.getByRole('button', { name: 'Back to week' }))
 
-    expect(await screen.findByRole('heading', { name: 'Week of Nov 9' })).toBeInTheDocument()
-    const tuesday = within(screen.getByRole('region', { name: 'Tue Nov 10' }))
-    expect(await tuesday.findByRole('link', { name: /Push Day/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Nov 9 – Nov 15' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: "Tuesday's workouts" })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /Push Day/ })).toBeInTheDocument()
   })
 })

@@ -11,7 +11,7 @@ describe('login', () => {
     const { screen } = await renderApp(newStore(false))
 
     expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: /week of/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Nov 2 – Nov 8' })).not.toBeInTheDocument()
   })
 
   it('shows an error for a wrong password', async () => {
@@ -33,7 +33,7 @@ describe('login', () => {
     await user.type(screen.getByLabelText('Password'), PASSWORD)
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
-    expect(await screen.findByRole('heading', { name: /week of/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Log out' }))
     expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument()

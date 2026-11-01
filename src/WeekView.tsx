@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { addDays, dayLabel, monthDay, startOfWeek, today, weekDays } from './dates'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import DayStrip from './DayStrip'
+import DayWorkouts from './DayWorkouts'
+import WeekHeader from './WeekHeader'
+import { addDays, startOfWeek, today, weekDays } from './dates'
 import { useStore } from './store/context'
 import type { WorkoutSummary } from './store/types'
 
@@ -13,14 +16,17 @@ export default function WeekView({ onSignOut }: Props) {
   const thisMonday = startOfWeek(todayIso)
   const monday = startOfWeek(params.get('week') ?? thisMonday)
   const days = weekDays(monday)
+  const requestedDay = params.get('day')
+  const selected =
+    requestedDay && days.includes(requestedDay) ? requestedDay : monday === thisMonday ? todayIso : monday
   const [workouts, setWorkouts] = useState<WorkoutSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const touchStart = useRef<number | null>(null)
   const navigate = useNavigate()
 
-  const addWorkout = async (date: string) => {
+  const addWorkout = async () => {
     try {
-      const id = await store.createWorkout(date, 'Workout')
+      const id = await store.createWorkout(selected, 'Workout')
       navigate(`/workout/${id}`)
     } catch {
       setError('Could not create workout. Check your connection.')
@@ -43,6 +49,10 @@ export default function WeekView({ onSignOut }: Props) {
     setParams(newMonday === thisMonday ? {} : { week: newMonday }, { replace: true })
   }
 
+  const select = (iso: string) => {
+    setParams({ week: monday, day: iso }, { replace: true })
+  }
+
   const onTouchEnd = (x: number) => {
     if (touchStart.current === null) return
     const dx = x - touchStart.current
@@ -57,65 +67,22 @@ export default function WeekView({ onSignOut }: Props) {
       onTouchStart={(e) => (touchStart.current = e.touches[0].clientX)}
       onTouchEnd={(e) => onTouchEnd(e.changedTouches[0].clientX)}
     >
-      <header className="week-header">
-        <button type="button" className="icon" aria-label="Previous week" onClick={() => goTo(addDays(monday, -7))}>
-          ‹
-        </button>
-        <h1>Week of {monthDay(monday)}</h1>
-        <button type="button" className="icon" aria-label="Next week" onClick={() => goTo(addDays(monday, 7))}>
-          ›
-        </button>
-      </header>
-      <div className="week-actions">
-        {monday !== thisMonday && (
-          <button type="button" onClick={() => goTo(thisMonday)}>
-            This week
+      <WeekHeader
+        monday={monday}
+        sunday={days[6]}
+        showToday={monday !== thisMonday}
+        onToday={() => goTo(thisMonday)}
+        onPrevious={() => goTo(addDays(monday, -7))}
+        onNext={() => goTo(addDays(monday, 7))}
+        trailing={
+          <button type="button" className="link-button" onClick={onSignOut}>
+            Log out
           </button>
-        )}
-        <button type="button" className="link-button" onClick={onSignOut}>
-          Log out
-        </button>
-      </div>
+        }
+      />
+      <DayStrip days={days} selected={selected} today={todayIso} onSelect={select} />
       {error && <p role="alert" className="error">{error}</p>}
-      {days.map((iso) => {
-        const dayWorkouts = (workouts ?? []).filter((w) => w.date === iso)
-        const isToday = iso === todayIso
-        return (
-          <section
-            key={iso}
-            aria-label={dayLabel(iso)}
-            aria-current={isToday ? 'date' : undefined}
-            className={isToday ? 'day today' : 'day'}
-          >
-            <div className="day-header">
-              <h2>{dayLabel(iso)}</h2>
-              <button
-                type="button"
-                className="icon add"
-                aria-label={`Add workout to ${dayLabel(iso)}`}
-                onClick={() => addWorkout(iso)}
-              >
-                +
-              </button>
-            </div>
-            {workouts && dayWorkouts.length === 0 && <p className="rest">Rest</p>}
-            <ul>
-              {dayWorkouts.map((w) => {
-                const missed = w.status === 'planned' && w.date < todayIso
-                return (
-                  <li key={w.id}>
-                    <Link to={`/workout/${w.id}`} className={`workout-chip ${w.status}${missed ? ' missed' : ''}`}>
-                      <span>{w.name}</span>
-                      {w.status === 'done' && <span className="badge">✓ Done</span>}
-                      {missed && <span className="badge">Not done</span>}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
-        )
-      })}
+      <DayWorkouts date={selected} today={todayIso} workouts={workouts} onAdd={addWorkout} />
     </main>
   )
 }
