@@ -1,80 +1,207 @@
-import { within } from '@testing-library/react'
+import { fireEvent, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { newStore, renderApp, setToday } from './harness'
+import { did, newStore, openWorkoutSheet, plan, renderApp, seedWorkout, setToday, type App } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
 })
 
-function day(screen: Awaited<ReturnType<typeof renderApp>>['screen'], label: string) {
-  return within(screen.getByRole('region', { name: label }))
+type Screen = App['screen']
+
+function stripDays(screen: Screen) {
+  return screen.getAllByRole('button', { name: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) / })
 }
 
 describe('week view', () => {
-  it('opens on the current Monday-to-Sunday week with today highlighted', async () => {
+  it('opens on the current Monday-to-Sunday week with today selected and marked', async () => {
     setToday('2026-11-04')
     const { screen } = await renderApp(newStore())
 
-    expect(await screen.findByRole('heading', { name: 'Week of Nov 2' })).toBeInTheDocument()
-    const days = screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))
-    expect(days).toEqual(['Mon Nov 2', 'Tue Nov 3', 'Wed Nov 4', 'Thu Nov 5', 'Fri Nov 6', 'Sat Nov 7', 'Sun Nov 8'])
-    expect(screen.getByRole('region', { name: 'Wed Nov 4' })).toHaveAttribute('aria-current', 'date')
-    expect(screen.getByRole('region', { name: 'Tue Nov 3' })).not.toHaveAttribute('aria-current')
+    expect(await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
+    expect(stripDays(screen).map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Mon Nov 2',
+      'Tue Nov 3',
+      'Wed Nov 4',
+      'Thu Nov 5',
+      'Fri Nov 6',
+      'Sat Nov 7',
+      'Sun Nov 8',
+    ])
+    const wednesday = screen.getByRole('button', { name: 'Wed Nov 4' })
+    expect(wednesday).toHaveAttribute('aria-current', 'date')
+    expect(wednesday).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Tue Nov 3' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('button', { name: 'Tue Nov 3' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('heading', { name: "Today's workouts" })).toBeInTheDocument()
   })
-
-  it('lists each day’s workouts and shows empty days as rest days', async () => {
+  it('lists only the selected day’s workouts in creation order, and shows rest days', async () => {
     setToday('2026-11-04')
     const store = newStore()
     await store.createWorkout('2026-11-03', 'Push Day')
     await store.createWorkout('2026-11-03', 'Evening Run')
     await store.createWorkout('2026-11-06', 'Pull Day')
-    await store.createWorkout('2026-11-10', 'Next Week Legs')
-    const { screen } = await renderApp(store)
+    const { user, screen } = await renderApp(store)
 
-    await screen.findByText('Push Day')
-    expect(day(screen, 'Tue Nov 3').getAllByRole('link').map((l) => l.textContent)).toEqual([
+    expect(await screen.findByText('Rest day')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Tue Nov 3' }))
+    expect(screen.getByRole('heading', { name: "Tuesday's workouts" })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tue Nov 3' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getAllByRole('link').map((l) => l.textContent)).toEqual([
       expect.stringContaining('Push Day'),
       expect.stringContaining('Evening Run'),
     ])
-    expect(day(screen, 'Fri Nov 6').getByRole('link', { name: /Pull Day/ })).toBeInTheDocument()
-    expect(day(screen, 'Mon Nov 2').getByText('Rest')).toBeInTheDocument()
-    expect(screen.queryByText('Next Week Legs')).not.toBeInTheDocument()
-  })
+    expect(screen.queryByText('Rest day')).not.toBeInTheDocument()
 
-  it('moves between weeks with arrows and jumps back to this week', async () => {
+    await user.click(screen.getByRole('button', { name: 'Fri Nov 6' }))
+    expect(screen.getByRole('heading', { name: "Friday's workouts" })).toBeInTheDocument()
+    expect(screen.getAllByRole('link').map((l) => l.textContent)).toEqual([expect.stringContaining('Pull Day')])
+  })
+  it('moves between weeks with the arrows, selecting Monday, and jumps back to today', async () => {
     setToday('2026-11-04')
     const store = newStore()
-    await store.createWorkout('2026-11-10', 'Next Week Legs')
-    await store.createWorkout('2026-10-27', 'Last Week Push')
+    await store.createWorkout('2026-11-09', 'Next Week Legs')
+    await store.createWorkout('2026-10-26', 'Last Week Push')
     const { user, screen } = await renderApp(store)
 
-    await screen.findByRole('heading', { name: 'Week of Nov 2' })
+    await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })
+    expect(screen.queryByRole('button', { name: 'Today' })).not.toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: 'Next week' }))
-    expect(await screen.findByRole('heading', { name: 'Week of Nov 9' })).toBeInTheDocument()
-    expect(await screen.findByText('Next Week Legs')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Nov 9 – Nov 15' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mon Nov 9' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('heading', { name: "Monday's workouts" })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /Next Week Legs/ })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Previous week' }))
     await user.click(screen.getByRole('button', { name: 'Previous week' }))
-    expect(await screen.findByRole('heading', { name: 'Week of Oct 26' })).toBeInTheDocument()
-    expect(await screen.findByText('Last Week Push')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Oct 26 – Nov 1' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /Last Week Push/ })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'This week' }))
-    expect(await screen.findByRole('heading', { name: 'Week of Nov 2' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Today' }))
+    expect(await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Wed Nov 4' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('heading', { name: "Today's workouts" })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Today' })).not.toBeInTheDocument()
   })
 
-  it('marks done workouts and dims past planned workouts as not done', async () => {
+  it('changes weeks when swiping left and right', async () => {
+    setToday('2026-11-04')
+    const { screen } = await renderApp(newStore())
+
+    await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })
+    const view = screen.getByRole('main')
+    fireEvent.touchStart(view, { touches: [{ clientX: 300 }] })
+    fireEvent.touchEnd(view, { changedTouches: [{ clientX: 100 }] })
+    expect(await screen.findByRole('heading', { name: 'Nov 9 – Nov 15' })).toBeInTheDocument()
+
+    fireEvent.touchStart(view, { touches: [{ clientX: 100 }] })
+    fireEvent.touchEnd(view, { changedTouches: [{ clientX: 300 }] })
+    expect(await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
+  })
+  it('keeps the week when swiping inside an open sheet', async () => {
+    setToday('2026-11-04')
+    const { user, screen } = await renderApp(newStore())
+
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    const sheet = screen.getByRole('dialog', { name: 'Settings' })
+    fireEvent.touchStart(sheet, { touches: [{ clientX: 300 }] })
+    fireEvent.touchEnd(sheet, { changedTouches: [{ clientX: 100 }] })
+
+    expect(screen.getByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Nov 9 – Nov 15' })).not.toBeInTheDocument()
+  })
+  it('marks done workouts and past planned workouts as not done', async () => {
     setToday('2026-11-04')
     const store = newStore()
     const done = await store.createWorkout('2026-11-02', 'Done Push')
     await store.setStatus(done, 'done')
-    await store.createWorkout('2026-11-03', 'Missed Pull')
+    await store.createWorkout('2026-11-02', 'Missed Pull')
     await store.createWorkout('2026-11-04', 'Today Legs')
-    await store.createWorkout('2026-11-06', 'Future Arms')
-    const { screen } = await renderApp(store)
+    const { user, screen } = await renderApp(store)
 
+    expect(await screen.findByRole('link', { name: /Today Legs/ })).not.toHaveTextContent(/done/i)
+    await user.click(screen.getByRole('button', { name: 'Mon Nov 2' }))
     expect(await screen.findByRole('link', { name: /Done Push/ })).toHaveTextContent(/done/i)
     expect(screen.getByRole('link', { name: /Missed Pull/ })).toHaveTextContent(/not done/i)
-    expect(screen.getByRole('link', { name: /Today Legs/ })).not.toHaveTextContent(/done/i)
-    expect(screen.getByRole('link', { name: /Future Arms/ })).not.toHaveTextContent(/done/i)
+  })
+
+  it('shows exercise and logged set counts with progress on each card', async () => {
+    setToday('2026-11-04')
+    const store = newStore()
+    await seedWorkout(store, {
+      date: '2026-11-04',
+      name: 'Push Day',
+      exercises: {
+        'Bench Press': [did(5, 100), did(null, 100), plan(5, 100)],
+        'Overhead Press': [did(8), plan(8), plan(8)],
+      },
+    })
+    await store.createWorkout('2026-11-04', 'Empty Session')
+    const { screen } = await renderApp(store)
+
+    const push = await screen.findByRole('link', { name: /Push Day/ })
+    expect(push).toHaveTextContent('2 exercises · 3/6 sets')
+    expect(within(push).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '3')
+    expect(within(push).getByRole('progressbar')).toHaveAttribute('aria-valuemax', '6')
+    expect(screen.getByRole('link', { name: /Empty Session/ })).toHaveTextContent('0 exercises · 0/0 sets')
+  })
+
+  it('marks each day with workouts by whether they are done, missed or planned', async () => {
+    setToday('2026-11-04')
+    const store = newStore()
+    const doneMon = await store.createWorkout('2026-11-02', 'Done Push')
+    await store.setStatus(doneMon, 'done')
+    const doneTue = await store.createWorkout('2026-11-03', 'Done Pull')
+    await store.setStatus(doneTue, 'done')
+    await store.createWorkout('2026-11-03', 'Missed Legs')
+    await store.createWorkout('2026-11-04', 'Today Run')
+    const doneFri = await store.createWorkout('2026-11-06', 'Done Early')
+    await store.setStatus(doneFri, 'done')
+    await store.createWorkout('2026-11-06', 'Planned Swim')
+    const { screen } = await renderApp(store)
+
+    expect(await screen.findByRole('button', { name: 'Mon Nov 2' })).toHaveAccessibleDescription('All done')
+    expect(screen.getByRole('button', { name: 'Tue Nov 3' })).toHaveAccessibleDescription('Missed')
+    expect(screen.getByRole('button', { name: 'Wed Nov 4' })).toHaveAccessibleDescription('Planned')
+    expect(screen.getByRole('button', { name: 'Fri Nov 6' })).toHaveAccessibleDescription('Planned')
+    expect(screen.getByRole('button', { name: 'Thu Nov 5' })).toHaveAccessibleDescription('')
+  })
+
+  it('marks a day mixing a done and a missed workout as missed', async () => {
+    setToday('2026-11-04')
+    const store = newStore()
+    await seedWorkout(store, { date: '2026-11-02', name: 'Done Push', status: 'done' })
+    await seedWorkout(store, { date: '2026-11-02', name: 'Skipped Pull' })
+    const { screen } = await renderApp(store)
+
+    expect(await screen.findByRole('button', { name: 'Mon Nov 2' })).toHaveAccessibleDescription('Missed')
+  })
+
+  it('adds a workout to the selected day and opens it', async () => {
+    setToday('2026-11-04')
+    const app = await renderApp(newStore())
+    const { user, screen } = app
+
+    await user.click(await screen.findByRole('button', { name: 'Fri Nov 6' }))
+    await user.click(screen.getByRole('button', { name: 'Add workout' }))
+    await screen.findByRole('button', { name: 'Workout actions' })
+    await openWorkoutSheet(app, 'Edit details')
+    expect(screen.getByLabelText('Date')).toHaveValue('2026-11-06')
+  })
+
+  it('returns from a workout to its week with its day selected', async () => {
+    setToday('2026-11-04')
+    const store = newStore()
+    await store.createWorkout('2026-11-12', 'Thursday Legs')
+    const { user, screen } = await renderApp(store)
+
+    await user.click(await screen.findByRole('button', { name: 'Next week' }))
+    await user.click(await screen.findByRole('button', { name: 'Thu Nov 12' }))
+    await user.click(await screen.findByRole('link', { name: /Thursday Legs/ }))
+    await user.click(await screen.findByRole('button', { name: 'Back to week' }))
+
+    expect(await screen.findByRole('heading', { name: 'Nov 9 – Nov 15' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Thu Nov 12' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('heading', { name: "Thursday's workouts" })).toBeInTheDocument()
   })
 })

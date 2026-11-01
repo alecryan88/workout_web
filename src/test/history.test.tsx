@@ -1,6 +1,6 @@
 import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { did, newStore, plan, renderApp, seedWorkout, setToday } from './harness'
+import { addExercise, did, newStore, plan, renderApp, seedWorkout, setToday } from './harness'
 import type { Store } from '../store/types'
 
 afterEach(() => {
@@ -10,7 +10,7 @@ afterEach(() => {
 async function openToday(store: Store) {
   const app = await renderApp(store)
   await app.user.click(await app.screen.findByRole('link', { name: /Today/ }))
-  await app.screen.findByLabelText('Workout name')
+  await app.screen.findByRole('button', { name: 'Workout actions' })
   return app
 }
 
@@ -61,8 +61,9 @@ describe('last performance', () => {
     await seedWorkout(store, { date: '2026-10-29', name: 'Pulls', status: 'done', exercises: { Deadlift: [did(5, 315)] } })
     await seedWorkout(store, { date: '2026-11-04', name: 'Today', exercises: { 'Brand New': [plan(5)] } })
 
-    const { user, screen } = await openToday(store)
-    await user.type(screen.getByLabelText('Add exercise'), 'Deadlift{Enter}')
+    const app = await openToday(store)
+    const { screen } = app
+    await addExercise(app, 'Deadlift')
 
     expect(await screen.findByText('Last: 1×5 @ 315 on Oct 29')).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Brand New' })).queryByText(/^Last:/)).not.toBeInTheDocument()

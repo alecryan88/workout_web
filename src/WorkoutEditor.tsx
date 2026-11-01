@@ -5,7 +5,8 @@ import { useStore } from './store/context'
 import CopyPanel from './CopyPanel'
 import ExerciseCard from './ExerciseCard'
 import ExercisePicker from './ExercisePicker'
-import type { Workout, WorkoutExercise } from './store/types'
+import Sheet from './Sheet'
+import { isLogged, type Workout, type WorkoutExercise } from './store/types'
 import { useAutosave, type SaveState } from './useAutosave'
 
 const SAVE_LABELS: Record<SaveState, string> = {
@@ -30,19 +31,34 @@ function DateInput({ value, onChange }: { value: string; onChange: (value: strin
   )
 }
 
+type EditorSheet = 'none' | 'actions' | 'details' | 'copy' | 'delete'
+
+const weekUrl = (workout: Workout | null) => (workout ? `/?week=${startOfWeek(workout.date)}&day=${workout.date}` : '/')
+
+function initiallyExpanded(workout: Workout) {
+  if (workout.status === 'done') return null
+  const index = workout.exercises.findIndex((entry) => entry.sets.some((set) => !isLogged(set)))
+  return index === -1 ? null : index
+}
+
 export default function WorkoutEditor() {
   const { id = '' } = useParams()
   const store = useStore()
   const navigate = useNavigate()
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [panel, setPanel] = useState<'none' | 'copy' | 'delete'>('none')
+  const [expanded, setExpanded] = useState<number | null>(null)
+  const [sheet, setSheet] = useState<EditorSheet>('none')
   const autosave = useAutosave((w: Workout) => store.saveWorkout(w))
 
   useEffect(() => {
     store
       .getWorkout(id)
-      .then((w) => (w ? setWorkout(w) : setLoadError('Workout not found.')))
+      .then((w) => {
+        if (!w) return setLoadError('Workout not found.')
+        setWorkout(w)
+        setExpanded(initiallyExpanded(w))
+      })
       .catch(() => setLoadError('Could not load workout. Check your connection.'))
   }, [store, id])
 
@@ -61,6 +77,15 @@ export default function WorkoutEditor() {
     const [item] = next.splice(index, 1)
     next.splice(index + direction, 0, item)
     setExercises(next)
+    if (expanded === index) setExpanded(index + direction)
+    else if (expanded === index + direction) setExpanded(index)
+  }
+
+  const removeExercise = (index: number) => {
+    if (!workout) return
+    setExercises(workout.exercises.filter((_, j) => j !== index))
+    if (expanded === index) setExpanded(null)
+    else if (expanded !== null && expanded > index) setExpanded(expanded - 1)
   }
 
   const toggleDone = () => {
@@ -77,12 +102,12 @@ export default function WorkoutEditor() {
   const remove = async () => {
     await autosave.flush()
     await store.deleteWorkout(id)
-    navigate(workout ? `/?week=${startOfWeek(workout.date)}` : '/')
+    navigate(weekUrl(workout))
   }
 
   const backToWeek = async () => {
     await autosave.flush()
-    navigate(workout ? `/?week=${startOfWeek(workout.date)}` : '/')
+    navigate(weekUrl(workout))
   }
 
   if (loadError) {
@@ -96,29 +121,26 @@ export default function WorkoutEditor() {
 
   if (!workout) return null
 
+  const closeSheet = () => setSheet('none')
+
   return (
     <main className="editor">
       <header className="editor-header">
-        <button type="button" className="link-button" aria-label="Back to week" onClick={backToWeek}>
-          ‹ Back to week
+        <button type="button" className="link-button nav-back" aria-label="Back to week" onClick={backToWeek}>
+          ‹ Week
         </button>
-        <span className={`save-state ${autosave.state}`} role={autosave.state === 'error' ? 'alert' : 'status'}>
-          {SAVE_LABELS[autosave.state]}
-        </span>
+        <div className="nav-title">
+          <h1>{workout.name}</h1>
+          <span className={`save-state ${autosave.state}`} role={autosave.state === 'error' ? 'alert' : 'status'}>
+            {SAVE_LABELS[autosave.state]}
+          </span>
+        </div>
+        <button type="button" className="link-button nav-more" aria-label="Workout actions" onClick={() => setSheet('actions')}>
+          •••
+        </button>
       </header>
 
-      <label>
-        Workout name
-        <input value={workout.name} onChange={(e) => update({ name: e.target.value })} />
-      </label>
-      <label>
-        Date
-        <DateInput value={workout.date} onChange={(date) => update({ date })} />
-      </label>
-      <label>
-        Notes
-        <textarea rows={2} value={workout.notes} onChange={(e) => update({ notes: e.target.value })} />
-      </label>
+      {workout.notes && <p className="workout-notes">{workout.notes}</p>}
 
       {workout.exercises.map((entry, i) => (
         <ExerciseCard
@@ -127,42 +149,64 @@ export default function WorkoutEditor() {
           workoutDate={workout.date}
           isFirst={i === 0}
           isLast={i === workout.exercises.length - 1}
+          expanded={expanded === i}
+          onToggle={() => setExpanded(expanded === i ? null : i)}
           onChange={(changed) => setExercises(workout.exercises.map((e, j) => (j === i ? changed : e)))}
-          onRemove={() => setExercises(workout.exercises.filter((_, j) => j !== i))}
+          onRemove={() => removeExercise(i)}
           onMove={(direction) => moveExercise(i, direction)}
         />
       ))}
 
-      <ExercisePicker onPick={(exercise) => setExercises([...workout.exercises, { exercise, sets: [] }])} />
+      <ExercisePicker
+        onPick={(exercise) => {
+          setExercises([...workout.exercises, { exercise, sets: [] }])
+          setExpanded(workout.exercises.length)
+        }}
+      />
 
-      <div className="editor-footer">
+      <div className="bottom-bar">
         <button type="button" className={workout.status === 'done' ? 'secondary' : 'primary done-button'} onClick={toggleDone}>
           {workout.status === 'done' ? 'Mark not done' : 'Mark done'}
         </button>
-        <div className="secondary-actions">
-          <button type="button" onClick={() => setPanel('copy')}>
-            Copy workout
-          </button>
-          <button type="button" className="danger" onClick={() => setPanel('delete')}>
-            Delete workout
-          </button>
-        </div>
       </div>
 
-      {panel === 'copy' && <CopyPanel onCopy={copy} onClose={() => setPanel('none')} />}
-      {panel === 'delete' && (
-        <section className="panel" role="alertdialog" aria-label="Delete workout">
-          <p>Delete “{workout.name}”? This can’t be undone.</p>
-          <div className="picker-row">
-            <button type="button" onClick={() => setPanel('none')}>
-              Cancel
-            </button>
-            <button type="button" className="danger primary" onClick={remove}>
-              Yes, delete
-            </button>
-          </div>
-        </section>
-      )}
+      <Sheet open={sheet === 'actions'} title="Workout actions" onClose={closeSheet}>
+        <button type="button" onClick={() => setSheet('details')}>
+          Edit details
+        </button>
+        <button type="button" onClick={() => setSheet('copy')}>
+          Copy
+        </button>
+        <button type="button" className="danger" onClick={() => setSheet('delete')}>
+          Delete
+        </button>
+      </Sheet>
+
+      <Sheet open={sheet === 'details'} title="Edit details" onClose={closeSheet} cancelLabel="Done">
+        <label>
+          Workout name
+          <input value={workout.name} onChange={(e) => update({ name: e.target.value })} />
+        </label>
+        <label>
+          Date
+          <DateInput value={workout.date} onChange={(date) => update({ date })} />
+        </label>
+        <label>
+          Notes
+          <textarea rows={3} value={workout.notes} onChange={(e) => update({ notes: e.target.value })} />
+        </label>
+      </Sheet>
+
+      <Sheet open={sheet === 'copy'} title="Copy workout" onClose={closeSheet} cancelLabel="Close">
+        <CopyPanel onCopy={copy} />
+      </Sheet>
+
+      <Sheet open={sheet === 'delete'} title="Delete workout" onClose={closeSheet}>
+        <p>Delete “{workout.name}”? This can’t be undone.</p>
+        <button type="button" className="danger" onClick={remove}>
+          Yes, delete
+        </button>
+      </Sheet>
     </main>
   )
 }

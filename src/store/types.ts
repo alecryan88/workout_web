@@ -26,7 +26,26 @@ export type Workout = {
   exercises: WorkoutExercise[]
 }
 
-export type WorkoutSummary = Pick<Workout, 'id' | 'date' | 'name' | 'status'>
+export type WorkoutSummary = Pick<Workout, 'id' | 'date' | 'name' | 'status'> & {
+  exerciseCount: number
+  setCount: number
+  loggedSetCount: number
+}
+
+export const isLogged = (set: Pick<SetEntry, 'actualReps' | 'actualWeight'>) =>
+  set.actualReps !== null || set.actualWeight !== null
+
+export function summaryCounts(exercises: { sets: Pick<SetEntry, 'actualReps' | 'actualWeight'>[] }[]) {
+  const sets = exercises.flatMap((e) => e.sets)
+  return {
+    exerciseCount: exercises.length,
+    setCount: sets.length,
+    loggedSetCount: sets.filter(isLogged).length,
+  }
+}
+
+export const isMissed = (workout: Pick<Workout, 'status' | 'date'>, today: string) =>
+  workout.status === 'planned' && workout.date < today
 
 export type PerformedSet = {
   reps: number | null

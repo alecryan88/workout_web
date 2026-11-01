@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Exercise, LastPerformance, Store, Workout, WorkoutStatus, WorkoutSummary } from './types'
+import { summaryCounts, type Exercise, type LastPerformance, type Store, type Workout, type WorkoutStatus, type WorkoutSummary } from './types'
 
 type SetRow = {
   position: number
@@ -20,6 +20,14 @@ type WorkoutRow = {
     exercise: Exercise
     sets: SetRow[]
   }[]
+}
+
+type SummaryRow = {
+  id: string
+  date: string
+  name: string
+  status: WorkoutStatus
+  workout_exercises: { sets: { actual_reps: number | null; actual_weight: number | null }[] }[]
 }
 
 const byPosition = (a: { position: number }, b: { position: number }) => a.position - b.position
@@ -51,14 +59,24 @@ export function createSupabaseStore(url: string, key: string): Store {
       await supabase.auth.signOut()
     },
     async listWorkouts(fromDate, toDate) {
-      return check<WorkoutSummary[]>(
+      const rows = check<SummaryRow[]>(
         await supabase
           .from('workouts')
-          .select('id, date, name, status')
+          .select('id, date, name, status, workout_exercises(sets(actual_reps, actual_weight))')
           .gte('date', fromDate)
           .lte('date', toDate)
           .order('date')
           .order('created_at'),
+      )
+      return rows.map(
+        ({ workout_exercises, ...workout }): WorkoutSummary => ({
+          ...workout,
+          ...summaryCounts(
+            workout_exercises.map((e) => ({
+              sets: e.sets.map((s) => ({ actualReps: s.actual_reps, actualWeight: s.actual_weight })),
+            })),
+          ),
+        }),
       )
     },
     async getWorkout(id) {
