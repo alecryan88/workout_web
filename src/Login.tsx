@@ -29,20 +29,22 @@ export default function Login({ store, onSignedIn }: Props) {
     <main className="login">
       <h1>Workouts</h1>
       <form onSubmit={submit}>
-        <label>
-          Email
-          <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </label>
+        <div className="card">
+          <label>
+            Email
+            <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </label>
+          <label>
+            Password
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
+        </div>
         {error && <p role="alert" className="error">{error}</p>}
         <button type="submit" className="primary" disabled={busy}>
           Log in
