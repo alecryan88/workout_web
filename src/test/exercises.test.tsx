@@ -1,6 +1,6 @@
 import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { newStore, renderApp, setToday } from './harness'
+import { addExercise, newStore, renderApp, setToday } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -27,33 +27,37 @@ describe('exercises in a workout', () => {
     const { user, screen } = await renderApp(store)
     await user.click(await screen.findByRole('link', { name: /Push Day/ }))
 
-    await user.type(await screen.findByLabelText('Add exercise'), 'b')
+    await user.click(await screen.findByRole('button', { name: '+ Add exercise' }))
+    await user.type(screen.getByLabelText('Add exercise'), 'b')
     const listbox = await screen.findByRole('listbox')
     expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['Back Squat', 'Bench Press'])
 
     await user.click(within(listbox).getByRole('option', { name: 'Bench Press' }))
     expect(await screen.findByRole('heading', { name: 'Bench Press' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Add exercise')).toHaveValue('')
+    expect(screen.queryByLabelText('Add exercise')).not.toBeInTheDocument()
   })
 
   it('creates a new exercise from a typed name and matches names case-insensitively', async () => {
-    const { user, screen } = await openWorkout()
+    const app = await openWorkout()
+    const { user, screen } = app
 
-    await user.type(screen.getByLabelText('Add exercise'), 'Overhead Press{Enter}')
+    await addExercise(app, 'Overhead Press')
     expect(await screen.findByRole('heading', { name: 'Overhead Press' })).toBeInTheDocument()
 
-    await user.type(screen.getByLabelText('Add exercise'), 'overhead press{Enter}')
+    await addExercise(app, 'overhead press')
     expect(await screen.findAllByRole('heading', { name: 'Overhead Press' })).toHaveLength(2)
 
+    await user.click(screen.getByRole('button', { name: '+ Add exercise' }))
     await user.type(screen.getByLabelText('Add exercise'), 'over')
     const listbox = await screen.findByRole('listbox')
     expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['Overhead Press'])
   })
 
   it('removes and reorders exercises', async () => {
-    const { user, screen } = await openWorkout()
+    const app = await openWorkout()
+    const { user, screen } = app
     for (const name of ['Bench Press', 'Dips', 'Flyes']) {
-      await user.type(screen.getByLabelText('Add exercise'), `${name}{Enter}`)
+      await addExercise(app, name)
       await screen.findByRole('heading', { name })
     }
 
@@ -72,8 +76,9 @@ describe('exercises in a workout', () => {
 
 describe('sets', () => {
   it('plans sets with target reps and weight, prefilling new sets from the previous one', async () => {
-    const { user, screen } = await openWorkout()
-    await user.type(screen.getByLabelText('Add exercise'), 'Bench Press{Enter}')
+    const app = await openWorkout()
+    const { user, screen } = app
+    await addExercise(app, 'Bench Press')
 
     await user.click(await screen.findByRole('button', { name: 'Add set to Bench Press' }))
     await user.type(screen.getByLabelText('Bench Press set 1 target reps'), '8')
@@ -90,8 +95,9 @@ describe('sets', () => {
   })
 
   it('allows bodyweight sets with no weight and removing a set', async () => {
-    const { user, screen } = await openWorkout()
-    await user.type(screen.getByLabelText('Add exercise'), 'Pull-up{Enter}')
+    const app = await openWorkout()
+    const { user, screen } = app
+    await addExercise(app, 'Pull-up')
     await user.click(await screen.findByRole('button', { name: 'Add set to Pull-up' }))
     await user.type(screen.getByLabelText('Pull-up set 1 target reps'), '10')
     await user.click(screen.getByRole('button', { name: 'Add set to Pull-up' }))

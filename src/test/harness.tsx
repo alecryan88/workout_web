@@ -59,3 +59,8 @@ export async function openWorkoutSheet(app: Awaited<ReturnType<typeof renderApp>
   await app.user.click(app.screen.getByRole('button', { name: 'Workout actions' }))
   await app.user.click(app.screen.getByRole('button', { name: item }))
 }
+
+export async function addExercise(app: Awaited<ReturnType<typeof renderApp>>, name: string) {
+  await app.user.click(await app.screen.findByRole('button', { name: '+ Add exercise' }))
+  await app.user.type(app.screen.getByLabelText('Add exercise'), `${name}{Enter}`)
+}

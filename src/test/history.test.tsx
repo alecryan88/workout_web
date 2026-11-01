@@ -1,6 +1,6 @@
 import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { did, newStore, plan, renderApp, seedWorkout, setToday } from './harness'
+import { addExercise, did, newStore, plan, renderApp, seedWorkout, setToday } from './harness'
 import type { Store } from '../store/types'
 
 afterEach(() => {
@@ -61,8 +61,9 @@ describe('last performance', () => {
     await seedWorkout(store, { date: '2026-10-29', name: 'Pulls', status: 'done', exercises: { Deadlift: [did(5, 315)] } })
     await seedWorkout(store, { date: '2026-11-04', name: 'Today', exercises: { 'Brand New': [plan(5)] } })
 
-    const { user, screen } = await openToday(store)
-    await user.type(screen.getByLabelText('Add exercise'), 'Deadlift{Enter}')
+    const app = await openToday(store)
+    const { screen } = app
+    await addExercise(app, 'Deadlift')
 
     expect(await screen.findByText('Last: 1×5 @ 315 on Oct 29')).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Brand New' })).queryByText(/^Last:/)).not.toBeInTheDocument()

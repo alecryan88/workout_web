@@ -6,6 +6,7 @@ type Props = { onPick: (exercise: Exercise) => void }
 
 export default function ExercisePicker({ onPick }: Props) {
   const store = useStore()
+  const [adding, setAdding] = useState(false)
   const [text, setText] = useState('')
   const [suggestions, setSuggestions] = useState<Exercise[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -30,6 +31,7 @@ export default function ExercisePicker({ onPick }: Props) {
     setText('')
     setSuggestions([])
     setError(null)
+    setAdding(false)
     onPick(exercise)
   }
 
@@ -45,6 +47,14 @@ export default function ExercisePicker({ onPick }: Props) {
 
   const open = suggestions.length > 0
 
+  if (!adding) {
+    return (
+      <button type="button" className="card add-exercise" onClick={() => setAdding(true)}>
+        + Add exercise
+      </button>
+    )
+  }
+
   return (
     <form className="exercise-picker" onSubmit={submit}>
       <div className="picker-row">
@@ -55,6 +65,7 @@ export default function ExercisePicker({ onPick }: Props) {
           aria-controls={listId}
           aria-autocomplete="list"
           autoComplete="off"
+          autoFocus
           autoCapitalize="words"
           placeholder="Add exercise…"
           value={text}

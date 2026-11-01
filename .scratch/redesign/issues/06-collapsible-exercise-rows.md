@@ -6,10 +6,10 @@
 
 **Status:** ready-for-agent
 
-- [ ] Collapsed rows show name, "x/y sets" or a done check, the last-performance line when there is one, and a chevron
-- [ ] Tapping a row expands it; tapping the expanded header collapses it
-- [ ] Only one exercise is expanded at a time
-- [ ] On open, the first exercise with unlogged sets is expanded; a done or fully logged workout starts with all rows collapsed
-- [ ] Moving or removing exercises keeps the same exercise expanded
-- [ ] "+ Add exercise" reveals the search field; picking or creating an exercise adds it expanded
-- [ ] Logging tests open (or rely on the auto-expanded) exercise before entering values; new tests cover expand/collapse rules; all tests pass
+- [x] Collapsed rows show name, "x/y sets" or a done check, the last-performance line when there is one, and a chevron
+- [x] Tapping a row expands it; tapping the expanded header collapses it
+- [x] Only one exercise is expanded at a time
+- [x] On open, the first exercise with unlogged sets is expanded; a done or fully logged workout starts with all rows collapsed
+- [x] Moving or removing exercises keeps the same exercise expanded
+- [x] "+ Add exercise" reveals the search field; picking or creating an exercise adds it expanded
+- [x] Logging tests open (or rely on the auto-expanded) exercise before entering values; new tests cover expand/collapse rules; all tests pass

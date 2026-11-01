@@ -71,6 +71,7 @@ describe('copying a workout', () => {
     expect(screen.getByLabelText('Bench Press set 1 target reps')).toHaveValue(8)
     expect(screen.getByLabelText('Bench Press set 2 target weight')).toHaveValue(185)
     expect(screen.getByLabelText('Bench Press set 1 actual reps')).toHaveValue(null)
+    await app.user.click(screen.getByRole('button', { name: 'Dips' }))
     expect(screen.getByLabelText('Dips set 1 actual reps')).toHaveValue(null)
     expect(screen.getByRole('button', { name: 'Mark done' })).toBeInTheDocument()
 
@@ -89,8 +90,9 @@ describe('copying a workout', () => {
     const { screen } = app
     expect(screen.getByLabelText('Bench Press set 1 target reps')).toHaveValue(6)
     expect(screen.getByLabelText('Bench Press set 2 target weight')).toHaveValue(180)
-    expect(screen.getByLabelText('Dips set 1 target reps')).toHaveValue(10)
     expect(screen.getByLabelText('Bench Press set 1 actual reps')).toHaveValue(null)
+    await app.user.click(screen.getByRole('button', { name: 'Dips' }))
+    expect(screen.getByLabelText('Dips set 1 target reps')).toHaveValue(10)
   })
 })
 

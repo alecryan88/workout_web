@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { startOfWeek } from './dates'
 import { useStore } from './store/context'
 import CopyPanel from './CopyPanel'
-import ExerciseCard from './ExerciseCard'
+import ExerciseCard, { isLogged } from './ExerciseCard'
 import ExercisePicker from './ExercisePicker'
 import Sheet from './Sheet'
 import type { Workout, WorkoutExercise } from './store/types'
@@ -31,19 +31,30 @@ function DateInput({ value, onChange }: { value: string; onChange: (value: strin
   )
 }
 
+function initiallyExpanded(workout: Workout) {
+  if (workout.status === 'done') return null
+  const index = workout.exercises.findIndex((entry) => entry.sets.some((set) => !isLogged(set)))
+  return index === -1 ? null : index
+}
+
 export default function WorkoutEditor() {
   const { id = '' } = useParams()
   const store = useStore()
   const navigate = useNavigate()
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<number | null>(null)
   const [sheet, setSheet] = useState<'none' | 'actions' | 'details' | 'copy' | 'delete'>('none')
   const autosave = useAutosave((w: Workout) => store.saveWorkout(w))
 
   useEffect(() => {
     store
       .getWorkout(id)
-      .then((w) => (w ? setWorkout(w) : setLoadError('Workout not found.')))
+      .then((w) => {
+        if (!w) return setLoadError('Workout not found.')
+        setWorkout(w)
+        setExpanded(initiallyExpanded(w))
+      })
       .catch(() => setLoadError('Could not load workout. Check your connection.'))
   }, [store, id])
 
@@ -62,6 +73,15 @@ export default function WorkoutEditor() {
     const [item] = next.splice(index, 1)
     next.splice(index + direction, 0, item)
     setExercises(next)
+    if (expanded === index) setExpanded(index + direction)
+    else if (expanded === index + direction) setExpanded(index)
+  }
+
+  const removeExercise = (index: number) => {
+    if (!workout) return
+    setExercises(workout.exercises.filter((_, j) => j !== index))
+    if (expanded === index) setExpanded(null)
+    else if (expanded !== null && expanded > index) setExpanded(expanded - 1)
   }
 
   const toggleDone = () => {
@@ -125,13 +145,20 @@ export default function WorkoutEditor() {
           workoutDate={workout.date}
           isFirst={i === 0}
           isLast={i === workout.exercises.length - 1}
+          expanded={expanded === i}
+          onToggle={() => setExpanded(expanded === i ? null : i)}
           onChange={(changed) => setExercises(workout.exercises.map((e, j) => (j === i ? changed : e)))}
-          onRemove={() => setExercises(workout.exercises.filter((_, j) => j !== i))}
+          onRemove={() => removeExercise(i)}
           onMove={(direction) => moveExercise(i, direction)}
         />
       ))}
 
-      <ExercisePicker onPick={(exercise) => setExercises([...workout.exercises, { exercise, sets: [] }])} />
+      <ExercisePicker
+        onPick={(exercise) => {
+          setExercises([...workout.exercises, { exercise, sets: [] }])
+          setExpanded(workout.exercises.length)
+        }}
+      />
 
       <div className="bottom-bar">
         <button type="button" className={workout.status === 'done' ? 'secondary' : 'primary done-button'} onClick={toggleDone}>
