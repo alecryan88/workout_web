@@ -274,6 +274,7 @@ label.checkbox input {
 }
 
 .strip-day {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -299,6 +300,24 @@ label.checkbox input {
   border-radius: 50%;
   font-size: 1.35rem;
   font-weight: 600;
+}
+
+.strip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.strip-dot.done {
+  background: var(--done);
+}
+
+.strip-dot.missed {
+  background: var(--missed);
+}
+
+.strip-dot.planned {
+  background: var(--accent);
 }
 
 .strip-day.today .strip-number,
@@ -335,33 +354,97 @@ label.checkbox input {
 }
 
 .workout-chip {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: var(--tap);
-  padding: 0 14px;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px 16px 18px;
   border-radius: var(--radius-card);
+  border-left: 6px solid var(--accent);
   background: var(--card);
   color: var(--text);
   text-decoration: none;
-  font-weight: 600;
+}
+
+.workout-chip.done {
+  border-left-color: var(--done);
+}
+
+.workout-chip.missed {
+  border-left-color: var(--missed);
+  opacity: 0.5;
+}
+
+.workout-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.workout-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.done-check {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--done);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.workout-counts {
+  font-size: 0.95rem;
+}
+
+.progress {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: var(--fill);
+  overflow: hidden;
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.workout-chip.done .progress-fill {
+  background: var(--done);
+}
+
+.workout-chip.missed .progress-fill {
+  background: var(--missed);
 }
 
 button.add-workout {
   width: 100%;
 }
 
-.workout-chip.done .badge {
-  color: var(--done);
-}
-
-.workout-chip.missed {
-  opacity: 0.45;
-}
-
 .badge {
   font-size: 0.8rem;
   font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .editor-header {

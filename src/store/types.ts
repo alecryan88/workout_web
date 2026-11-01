@@ -26,7 +26,14 @@ export type Workout = {
   exercises: WorkoutExercise[]
 }
 
-export type WorkoutSummary = Pick<Workout, 'id' | 'date' | 'name' | 'status'>
+export type WorkoutSummary = Pick<Workout, 'id' | 'date' | 'name' | 'status'> & {
+  exerciseCount: number
+  setCount: number
+  loggedSetCount: number
+}
+
+export const isLogged = (set: Pick<SetEntry, 'actualReps' | 'actualWeight'>) =>
+  set.actualReps !== null || set.actualWeight !== null
 
 export type PerformedSet = {
   reps: number | null

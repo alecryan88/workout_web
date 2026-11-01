@@ -21,9 +21,32 @@ export default function DayWorkouts({ date, today, workouts, onAdd }: Props) {
           return (
             <li key={w.id}>
               <Link to={`/workout/${w.id}`} className={`workout-chip card ${w.status}${missed ? ' missed' : ''}`}>
-                <span>{w.name}</span>
-                {w.status === 'done' && <span className="badge">✓ Done</span>}
-                {missed && <span className="badge">Not done</span>}
+                <span className="workout-card-top">
+                  <span className="workout-name">{w.name}</span>
+                  {w.status === 'done' && (
+                    <span className="done-check">
+                      <span aria-hidden="true">✓</span>
+                      <span className="visually-hidden">Done</span>
+                    </span>
+                  )}
+                  {missed && <span className="badge">Not done</span>}
+                </span>
+                <span className="workout-counts">
+                  {w.exerciseCount} {w.exerciseCount === 1 ? 'exercise' : 'exercises'} · {w.loggedSetCount}/{w.setCount} sets
+                </span>
+                <span
+                  className="progress"
+                  role="progressbar"
+                  aria-label="Logged sets"
+                  aria-valuemin={0}
+                  aria-valuemax={w.setCount}
+                  aria-valuenow={w.loggedSetCount}
+                >
+                  <span
+                    className="progress-fill"
+                    style={{ width: `${w.setCount === 0 ? 0 : (w.loggedSetCount / w.setCount) * 100}%` }}
+                  />
+                </span>
               </Link>
             </li>
           )

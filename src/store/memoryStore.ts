@@ -1,5 +1,5 @@
 import { copyExercises } from './copy'
-import type { Exercise, Store, Workout } from './types'
+import { isLogged, type Exercise, type Store, type Workout } from './types'
 
 type Options = {
   email: string
@@ -29,7 +29,18 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
     async listWorkouts(fromDate, toDate) {
       return [...workouts.values()]
         .filter((w) => w.date >= fromDate && w.date <= toDate)
-        .map(({ id, date, name, status }) => ({ id, date, name, status }))
+        .map(({ id, date, name, status, exercises }) => {
+          const sets = exercises.flatMap((e) => e.sets)
+          return {
+            id,
+            date,
+            name,
+            status,
+            exerciseCount: exercises.length,
+            setCount: sets.length,
+            loggedSetCount: sets.filter(isLogged).length,
+          }
+        })
     },
     async getWorkout(workoutId) {
       const workout = workouts.get(workoutId)

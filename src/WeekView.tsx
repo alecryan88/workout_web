@@ -87,7 +87,7 @@ export default function WeekView({ onSignOut }: Props) {
           Log out
         </button>
       </Sheet>
-      <DayStrip days={days} selected={selected} today={todayIso} onSelect={select} />
+      <DayStrip days={days} selected={selected} today={todayIso} workouts={workouts ?? []} onSelect={select} />
       {error && <p role="alert" className="error">{error}</p>}
       <DayWorkouts date={selected} today={todayIso} workouts={workouts} onAdd={addWorkout} />
     </main>
