@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] Colour tokens defined as CSS custom properties, with a light default and a dark variant under the light/dark media query
 - [ ] Existing screens (week view, editor, panels) render with the new tokens and base styles, with no behaviour change

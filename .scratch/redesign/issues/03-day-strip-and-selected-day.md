@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Visual foundation and login restyle)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] Header shows a date-range title with "Previous week" and "Next week" arrow buttons
 - [ ] The strip shows Mon–Sun for the viewed week; each day is a button named by its full day label (e.g. "Wed Nov 4") with its selected state exposed

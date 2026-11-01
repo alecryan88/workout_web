@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 (Bottom sheet and log out behind a gear)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] Navigation bar shows "‹ Week", the workout name, the save status, and a "•••" button
 - [ ] "‹ Week" saves pending changes and returns to the workout's week and day

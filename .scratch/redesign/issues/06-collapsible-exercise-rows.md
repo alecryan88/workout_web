@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 (Editor top bar, notes, actions menu and bottom bar). This ordering avoids conflicting changes to the same editor screen.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Collapsed rows show name, "x/y sets" or a done check, the last-performance line when there is one, and a chevron
 - [x] Tapping a row expands it; tapping the expanded header collapses it

@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 (Bottom sheet and log out behind a gear), 06 (Collapsible exercise rows)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] Set rows show set number, target reps × lbs, actual reps × lbs and ✓, with targets visually secondary and still editable
 - [ ] ✓ fills actuals from targets; logged rows are tinted light green

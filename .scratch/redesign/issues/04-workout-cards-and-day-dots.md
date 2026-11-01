@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 (Day strip and selected day's workouts)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] The workout summary includes exercise count, set count and logged-set count in both stores
 - [ ] Cards show "N exercises · x/y sets" based on logged actuals

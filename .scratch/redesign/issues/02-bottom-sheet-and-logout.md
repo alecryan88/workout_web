@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Visual foundation and login restyle)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] A shared sheet component exists with dimmed backdrop, title, content area, and dismiss on backdrop tap or Cancel/Close
 - [ ] The sheet has a dialog role and an accessible name
