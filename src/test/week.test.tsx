@@ -1,6 +1,6 @@
 import { fireEvent, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { did, newStore, plan, renderApp, seedWorkout, setToday } from './harness'
+import { did, newStore, openWorkoutSheet, plan, renderApp, seedWorkout, setToday } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -157,11 +157,14 @@ describe('week view', () => {
 
   it('adds a workout to the selected day and opens it', async () => {
     setToday('2026-11-04')
-    const { user, screen } = await renderApp(newStore())
+    const app = await renderApp(newStore())
+    const { user, screen } = app
 
     await user.click(await screen.findByRole('button', { name: 'Fri Nov 6' }))
     await user.click(screen.getByRole('button', { name: 'Add workout' }))
-    expect(await screen.findByLabelText('Date')).toHaveValue('2026-11-06')
+    await screen.findByRole('button', { name: 'Workout actions' })
+    await openWorkoutSheet(app, 'Edit details')
+    expect(screen.getByLabelText('Date')).toHaveValue('2026-11-06')
   })
 
   it('returns from a workout to its week with its day selected', async () => {

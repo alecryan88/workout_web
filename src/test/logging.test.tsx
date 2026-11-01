@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { newStore, renderApp, setToday } from './harness'
+import { newStore, openWorkoutSheet, renderApp, setToday } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -25,7 +25,7 @@ async function workoutWithBench() {
   })
   const app = await renderApp(store)
   await app.user.click(await app.screen.findByRole('link', { name: /Push Day/ }))
-  await app.screen.findByLabelText('Workout name')
+  await app.screen.findByRole('button', { name: 'Workout actions' })
   return app
 }
 
@@ -65,18 +65,21 @@ describe('logging at the gym', () => {
   })
 
   it('marks a workout done, shows it in the week, and can unmark it', async () => {
-    const { user, screen } = await workoutWithBench()
+    const app = await workoutWithBench()
+    const { user, screen } = app
 
     await user.click(screen.getByRole('button', { name: 'Mark done' }))
     expect(await screen.findByRole('button', { name: 'Mark not done' })).toBeInTheDocument()
+    await openWorkoutSheet(app, 'Edit details')
     await user.type(screen.getByLabelText('Notes'), 'Edited after done')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
 
     await user.click(screen.getByRole('button', { name: 'Back to week' }))
     expect(await screen.findByRole('heading', { name: "Today's workouts" })).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: /Push Day/ })).toHaveTextContent(/done/i)
 
     await user.click(screen.getByRole('link', { name: /Push Day/ }))
-    expect(await screen.findByLabelText('Notes')).toHaveValue('Edited after done')
+    expect(await screen.findByText('Edited after done')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Mark not done' }))
     await user.click(screen.getByRole('button', { name: 'Back to week' }))
     expect(await screen.findByRole('heading', { name: "Today's workouts" })).toBeInTheDocument()

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { newStore, renderApp, seedWorkout, setToday } from './harness'
+import { newStore, openWorkoutSheet, renderApp, seedWorkout, setToday } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -24,7 +24,7 @@ async function setup() {
   const app = await renderApp(store)
   await app.user.click(await app.screen.findByRole('button', { name: 'Mon Nov 2' }))
   await app.user.click(await app.screen.findByRole('link', { name: /Push Day/ }))
-  await app.screen.findByLabelText('Workout name')
+  await app.screen.findByRole('button', { name: 'Workout actions' })
   return app
 }
 
@@ -32,7 +32,7 @@ type App = Awaited<ReturnType<typeof setup>>
 
 async function copyTo(app: App, dates: string[], actualsAsTargets = false) {
   const { user, screen } = app
-  await user.click(screen.getByRole('button', { name: 'Copy workout' }))
+  await openWorkoutSheet(app, 'Copy')
   for (const date of dates) {
     await user.type(screen.getByLabelText('Copy to date'), date)
     await user.click(screen.getByRole('button', { name: 'Add date' }))
@@ -41,6 +41,7 @@ async function copyTo(app: App, dates: string[], actualsAsTargets = false) {
   const count = dates.length === 1 ? '1 date' : `${dates.length} dates`
   await user.click(screen.getByRole('button', { name: `Copy to ${count}` }))
   expect(await screen.findByText(`Copied to ${count}`)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Close' }))
 }
 
 async function openOn(app: App, weekTitle: string, dayName: string) {
@@ -54,7 +55,7 @@ async function openOn(app: App, weekTitle: string, dayName: string) {
   const link = await screen.findByRole('link', { name: /Push Day/ })
   expect(link).not.toHaveTextContent(/done/i)
   await user.click(link)
-  await screen.findByLabelText('Workout name')
+  await screen.findByRole('button', { name: 'Workout actions' })
 }
 
 describe('copying a workout', () => {
@@ -64,8 +65,8 @@ describe('copying a workout', () => {
 
     await openOn(app, 'Nov 16 – Nov 22', 'Mon Nov 16')
     const { screen } = app
-    expect(screen.getByLabelText('Workout name')).toHaveValue('Push Day')
-    expect(screen.getByLabelText('Notes')).toHaveValue('Pause reps')
+    expect(screen.getByRole('heading', { level: 1, name: 'Push Day' })).toBeInTheDocument()
+    expect(screen.getByText('Pause reps')).toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Bench Press', 'Dips'])
     expect(screen.getByLabelText('Bench Press set 1 target reps')).toHaveValue(8)
     expect(screen.getByLabelText('Bench Press set 2 target weight')).toHaveValue(185)
@@ -95,13 +96,15 @@ describe('copying a workout', () => {
 
 describe('deleting a workout', () => {
   it('asks for confirmation before deleting', async () => {
-    const { user, screen } = await setup()
+    const app = await setup()
+    const { user, screen } = app
 
-    await user.click(screen.getByRole('button', { name: 'Delete workout' }))
+    await openWorkoutSheet(app, 'Delete')
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(screen.getByLabelText('Workout name')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Push Day' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Delete workout' }))
+    await openWorkoutSheet(app, 'Delete')
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
     expect(await screen.findByRole('heading', { name: 'Nov 2 – Nov 8' })).toBeInTheDocument()

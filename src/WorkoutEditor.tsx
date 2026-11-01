@@ -5,6 +5,7 @@ import { useStore } from './store/context'
 import CopyPanel from './CopyPanel'
 import ExerciseCard from './ExerciseCard'
 import ExercisePicker from './ExercisePicker'
+import Sheet from './Sheet'
 import type { Workout, WorkoutExercise } from './store/types'
 import { useAutosave, type SaveState } from './useAutosave'
 
@@ -36,7 +37,7 @@ export default function WorkoutEditor() {
   const navigate = useNavigate()
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [panel, setPanel] = useState<'none' | 'copy' | 'delete'>('none')
+  const [sheet, setSheet] = useState<'none' | 'actions' | 'details' | 'copy' | 'delete'>('none')
   const autosave = useAutosave((w: Workout) => store.saveWorkout(w))
 
   useEffect(() => {
@@ -96,29 +97,26 @@ export default function WorkoutEditor() {
 
   if (!workout) return null
 
+  const closeSheet = () => setSheet('none')
+
   return (
     <main className="editor">
       <header className="editor-header">
-        <button type="button" className="link-button" aria-label="Back to week" onClick={backToWeek}>
-          ‹ Back to week
+        <button type="button" className="link-button nav-back" aria-label="Back to week" onClick={backToWeek}>
+          ‹ Week
         </button>
-        <span className={`save-state ${autosave.state}`} role={autosave.state === 'error' ? 'alert' : 'status'}>
-          {SAVE_LABELS[autosave.state]}
-        </span>
+        <div className="nav-title">
+          <h1>{workout.name}</h1>
+          <span className={`save-state ${autosave.state}`} role={autosave.state === 'error' ? 'alert' : 'status'}>
+            {SAVE_LABELS[autosave.state]}
+          </span>
+        </div>
+        <button type="button" className="link-button nav-more" aria-label="Workout actions" onClick={() => setSheet('actions')}>
+          •••
+        </button>
       </header>
 
-      <label>
-        Workout name
-        <input value={workout.name} onChange={(e) => update({ name: e.target.value })} />
-      </label>
-      <label>
-        Date
-        <DateInput value={workout.date} onChange={(date) => update({ date })} />
-      </label>
-      <label>
-        Notes
-        <textarea rows={2} value={workout.notes} onChange={(e) => update({ notes: e.target.value })} />
-      </label>
+      {workout.notes && <p className="workout-notes">{workout.notes}</p>}
 
       {workout.exercises.map((entry, i) => (
         <ExerciseCard
@@ -135,34 +133,49 @@ export default function WorkoutEditor() {
 
       <ExercisePicker onPick={(exercise) => setExercises([...workout.exercises, { exercise, sets: [] }])} />
 
-      <div className="editor-footer">
+      <div className="bottom-bar">
         <button type="button" className={workout.status === 'done' ? 'secondary' : 'primary done-button'} onClick={toggleDone}>
           {workout.status === 'done' ? 'Mark not done' : 'Mark done'}
         </button>
-        <div className="secondary-actions">
-          <button type="button" onClick={() => setPanel('copy')}>
-            Copy workout
-          </button>
-          <button type="button" className="danger" onClick={() => setPanel('delete')}>
-            Delete workout
-          </button>
-        </div>
       </div>
 
-      {panel === 'copy' && <CopyPanel onCopy={copy} onClose={() => setPanel('none')} />}
-      {panel === 'delete' && (
-        <section className="panel" role="alertdialog" aria-label="Delete workout">
-          <p>Delete “{workout.name}”? This can’t be undone.</p>
-          <div className="picker-row">
-            <button type="button" onClick={() => setPanel('none')}>
-              Cancel
-            </button>
-            <button type="button" className="danger primary" onClick={remove}>
-              Yes, delete
-            </button>
-          </div>
-        </section>
-      )}
+      <Sheet open={sheet === 'actions'} title="Workout actions" onClose={closeSheet}>
+        <button type="button" onClick={() => setSheet('details')}>
+          Edit details
+        </button>
+        <button type="button" onClick={() => setSheet('copy')}>
+          Copy
+        </button>
+        <button type="button" className="danger" onClick={() => setSheet('delete')}>
+          Delete
+        </button>
+      </Sheet>
+
+      <Sheet open={sheet === 'details'} title="Edit details" onClose={closeSheet} cancelLabel="Done">
+        <label>
+          Workout name
+          <input value={workout.name} onChange={(e) => update({ name: e.target.value })} />
+        </label>
+        <label>
+          Date
+          <DateInput value={workout.date} onChange={(date) => update({ date })} />
+        </label>
+        <label>
+          Notes
+          <textarea rows={3} value={workout.notes} onChange={(e) => update({ notes: e.target.value })} />
+        </label>
+      </Sheet>
+
+      <Sheet open={sheet === 'copy'} title="Copy workout" onClose={closeSheet} cancelLabel="Close">
+        <CopyPanel onCopy={copy} />
+      </Sheet>
+
+      <Sheet open={sheet === 'delete'} title="Delete workout" onClose={closeSheet}>
+        <p>Delete “{workout.name}”? This can’t be undone.</p>
+        <button type="button" className="danger" onClick={remove}>
+          Yes, delete
+        </button>
+      </Sheet>
     </main>
   )
 }

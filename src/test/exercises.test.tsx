@@ -12,7 +12,7 @@ async function openWorkout(name = 'Push Day') {
   await store.createWorkout('2026-11-04', name)
   const app = await renderApp(store)
   await app.user.click(await app.screen.findByRole('link', { name: new RegExp(name) }))
-  await app.screen.findByLabelText('Workout name')
+  await app.screen.findByRole('button', { name: 'Workout actions' })
   return { ...app, store }
 }
 
