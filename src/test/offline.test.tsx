@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { newStore, renderApp, setToday } from './harness'
+import { newStore, openWorkoutSheet, renderApp, setToday } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -11,10 +11,13 @@ describe('connection problems', () => {
     const store = newStore()
     await store.createWorkout('2026-11-04', 'Legs')
     const offline = { ...store, saveWorkout: () => Promise.reject(new Error('Failed to fetch')) }
-    const { user, screen } = await renderApp(offline)
+    const app = await renderApp(offline)
+    const { user, screen } = app
 
     await user.click(await screen.findByRole('link', { name: /Legs/ }))
-    await user.type(await screen.findByLabelText('Notes'), 'x')
+    await screen.findByRole('button', { name: 'Workout actions' })
+    await openWorkoutSheet(app, 'Edit details')
+    await user.type(screen.getByLabelText('Notes'), 'x')
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn’t save/i)
   })

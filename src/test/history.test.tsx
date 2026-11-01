@@ -10,7 +10,7 @@ afterEach(() => {
 async function openToday(store: Store) {
   const app = await renderApp(store)
   await app.user.click(await app.screen.findByRole('link', { name: /Today/ }))
-  await app.screen.findByLabelText('Workout name')
+  await app.screen.findByRole('button', { name: 'Workout actions' })
   return app
 }
 

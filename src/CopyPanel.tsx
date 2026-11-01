@@ -3,12 +3,11 @@ import { dayLabel } from './dates'
 
 type Props = {
   onCopy: (dates: string[], actualsAsTargets: boolean) => Promise<void>
-  onClose: () => void
 }
 
 const plural = (n: number) => (n === 1 ? '1 date' : `${n} dates`)
 
-export default function CopyPanel({ onCopy, onClose }: Props) {
+export default function CopyPanel({ onCopy }: Props) {
   const [draft, setDraft] = useState('')
   const [dates, setDates] = useState<string[]>([])
   const [actualsAsTargets, setActualsAsTargets] = useState(false)
@@ -36,13 +35,7 @@ export default function CopyPanel({ onCopy, onClose }: Props) {
   }
 
   return (
-    <section className="panel" aria-label="Copy workout">
-      <div className="panel-header">
-        <h2>Copy workout</h2>
-        <button type="button" className="link-button" onClick={onClose}>
-          Close
-        </button>
-      </div>
+    <div className="copy-panel">
       <div className="picker-row">
         <input type="date" aria-label="Copy to date" value={draft} onChange={(e) => setDraft(e.target.value)} />
         <button type="button" onClick={addDate} disabled={!draft}>
@@ -70,6 +63,6 @@ export default function CopyPanel({ onCopy, onClose }: Props) {
       </button>
       {message && <p role="status" className="ok">{message}</p>}
       {error && <p role="alert" className="error">{error}</p>}
-    </section>
+    </div>
   )
 }

@@ -54,3 +54,8 @@ export async function seedWorkout(store: Store, seed: SeedWorkout) {
 
 export const did = (reps: number | null, weight: number | null = null): SeedSet => ({ actual: [reps, weight] })
 export const plan = (reps: number | null, weight: number | null = null): SeedSet => ({ target: [reps, weight] })
+
+export async function openWorkoutSheet(app: Awaited<ReturnType<typeof renderApp>>, item: 'Edit details' | 'Copy' | 'Delete') {
+  await app.user.click(app.screen.getByRole('button', { name: 'Workout actions' }))
+  await app.user.click(app.screen.getByRole('button', { name: item }))
+}
