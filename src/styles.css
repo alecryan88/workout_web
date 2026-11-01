@@ -469,3 +469,77 @@ input[type='number']::-webkit-outer-spin-button {
 input[type='number'] {
   -moz-appearance: textfield;
 }
+
+.sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  animation: sheet-fade 200ms ease-out;
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100dvh - var(--safe-top) - 24px);
+  overflow-y: auto;
+  padding: 16px calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 16px) calc(var(--safe-left) + 16px);
+  background: var(--bg);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  animation: sheet-up 250ms ease-out;
+}
+
+.sheet-title {
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 4px 0 8px;
+}
+
+.sheet-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sheet-content > button,
+.sheet-cancel {
+  width: 100%;
+  background: var(--card);
+}
+
+.sheet-cancel {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet-backdrop {
+    animation: none;
+  }
+}

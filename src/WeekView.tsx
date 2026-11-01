@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { addDays, dayLabel, monthDay, startOfWeek, today, weekDays } from './dates'
+import Sheet from './Sheet'
 import { useStore } from './store/context'
 import type { WorkoutSummary } from './store/types'
 
@@ -17,6 +18,7 @@ export default function WeekView({ onSignOut }: Props) {
   const [error, setError] = useState<string | null>(null)
   const touchStart = useRef<number | null>(null)
   const navigate = useNavigate()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const addWorkout = async (date: string) => {
     try {
@@ -72,10 +74,15 @@ export default function WeekView({ onSignOut }: Props) {
             This week
           </button>
         )}
-        <button type="button" className="link-button" onClick={onSignOut}>
-          Log out
+        <button type="button" className="icon gear" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
+          ⚙
         </button>
       </div>
+      <Sheet open={settingsOpen} title="Settings" onClose={() => setSettingsOpen(false)}>
+        <button type="button" className="danger" onClick={onSignOut}>
+          Log out
+        </button>
+      </Sheet>
       {error && <p role="alert" className="error">{error}</p>}
       {days.map((iso) => {
         const dayWorkouts = (workouts ?? []).filter((w) => w.date === iso)
