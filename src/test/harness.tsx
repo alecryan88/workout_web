@@ -64,3 +64,8 @@ export async function addExercise(app: Awaited<ReturnType<typeof renderApp>>, na
   await app.user.click(await app.screen.findByRole('button', { name: '+ Add exercise' }))
   await app.user.type(app.screen.getByLabelText('Add exercise'), `${name}{Enter}`)
 }
+
+export async function exerciseAction(app: Awaited<ReturnType<typeof renderApp>>, exercise: string, action: string) {
+  await app.user.click(app.screen.getByRole('button', { name: `Actions for ${exercise}` }))
+  await app.user.click(app.screen.getByRole('button', { name: action }))
+}

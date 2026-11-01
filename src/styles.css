@@ -623,6 +623,11 @@ button.add-workout {
   display: flex;
 }
 
+.exercise-tools button {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .exercise-body {
   margin-top: 12px;
 }
@@ -649,9 +654,19 @@ button.add-exercise {
 
 .set-row {
   display: grid;
-  grid-template-columns: 22px 1fr 1fr 40px 32px;
+  grid-template-columns: 28px 1fr 1fr 40px;
   align-items: center;
   gap: 6px;
+  padding: 2px 4px;
+  border-radius: var(--radius);
+}
+
+.set-row.editing {
+  grid-template-columns: 28px 1fr 1fr 40px 32px;
+}
+
+.set-row.logged {
+  background: var(--done-tint);
 }
 
 .set-head {
@@ -678,6 +693,21 @@ button.add-exercise {
   min-width: 0;
   background: var(--fill);
   border-color: transparent;
+}
+
+.pair.target input {
+  padding: 6px 2px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.pair.actual input {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.set-row.logged .pair input {
+  background: transparent;
 }
 
 .times {

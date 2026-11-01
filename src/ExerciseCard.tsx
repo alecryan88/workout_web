@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import NumberInput from './NumberInput'
+import Sheet from './Sheet'
 import { useStore } from './store/context'
 import { isLogged, type SetEntry, type WorkoutExercise } from './store/types'
 import { summarisePerformance } from './summary'
@@ -41,6 +42,18 @@ export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, expa
   const summaryId = useId()
   const loggedCount = entry.sets.filter(isLogged).length
   const allLogged = entry.sets.length > 0 && loggedCount === entry.sets.length
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [editingSets, setEditingSets] = useState(false)
+
+  useEffect(() => {
+    if (!expanded) setEditingSets(false)
+  }, [expanded])
+
+  const closeMenu = () => setMenuOpen(false)
+  const fromMenu = (action: () => void) => () => {
+    closeMenu()
+    action()
+  }
 
   const setSets = (sets: SetEntry[]) => onChange({ ...entry, sets })
 
@@ -84,41 +97,43 @@ export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, expa
         <span className={`chevron${expanded ? ' open' : ''}`} aria-hidden="true">
           ›
         </span>
-        <div className="exercise-tools">
-          <button type="button" className="icon" aria-label={`Move ${name} up`} disabled={isFirst} onClick={() => onMove(-1)}>
-            ↑
-          </button>
-          <button type="button" className="icon" aria-label={`Move ${name} down`} disabled={isLast} onClick={() => onMove(1)}>
-            ↓
-          </button>
-          <button type="button" className="icon danger" aria-label={`Remove ${name}`} onClick={onRemove}>
-            ✕
-          </button>
-        </div>
+        {expanded && (
+          <div className="exercise-tools">
+            {editingSets ? (
+              <button type="button" className="link-button" onClick={() => setEditingSets(false)}>
+                Done
+              </button>
+            ) : (
+              <button type="button" className="icon" aria-label={`Actions for ${name}`} onClick={() => setMenuOpen(true)}>
+                •••
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {expanded && (
         <div id={bodyId} className="exercise-body">
           {entry.sets.length > 0 && (
             <div className="sets">
-              <div className="set-row set-head" aria-hidden="true">
-                <span>#</span>
+              <div className={`set-row set-head${editingSets ? ' editing' : ''}`} aria-hidden="true">
+                <span>Set</span>
                 <span>Target</span>
                 <span>Actual</span>
                 <span />
-                <span />
+                {editingSets && <span />}
               </div>
               {entry.sets.map((set, i) => {
                 const label = `${name} set ${i + 1}`
                 return (
-                  <div className="set-row" key={i}>
+                  <div className={`set-row${isLogged(set) ? ' logged' : ''}${editingSets ? ' editing' : ''}`} key={i}>
                     <span className="set-number">{i + 1}</span>
-                    <span className="pair">
+                    <span className="pair target">
                       <NumberInput label={`${label} target reps`} placeholder="reps" value={set.targetReps} onChange={(v) => updateSet(i, { targetReps: v })} />
                       <span className="times">×</span>
                       <NumberInput label={`${label} target weight`} placeholder="lbs" decimal value={set.targetWeight} onChange={(v) => updateSet(i, { targetWeight: v })} />
                     </span>
-                    <span className="pair">
+                    <span className="pair actual">
                       <NumberInput label={`${label} actual reps`} placeholder="reps" value={set.actualReps} onChange={(v) => updateSet(i, { actualReps: v })} />
                       <span className="times">×</span>
                       <NumberInput label={`${label} actual weight`} placeholder="lbs" decimal value={set.actualWeight} onChange={(v) => updateSet(i, { actualWeight: v })} />
@@ -132,9 +147,11 @@ export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, expa
                     >
                       ✓
                     </button>
-                    <button type="button" className="icon danger" aria-label={`Remove ${label}`} onClick={() => setSets(entry.sets.filter((_, j) => j !== i))}>
-                      ✕
-                    </button>
+                    {editingSets && (
+                      <button type="button" className="icon danger" aria-label={`Remove ${label}`} onClick={() => setSets(entry.sets.filter((_, j) => j !== i))}>
+                        ✕
+                      </button>
+                    )}
                   </div>
                 )
               })}
@@ -146,6 +163,21 @@ export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, expa
           </button>
         </div>
       )}
+
+      <Sheet open={menuOpen} title={name} onClose={closeMenu}>
+        <button type="button" aria-label={`Move ${name} up`} disabled={isFirst} onClick={fromMenu(() => onMove(-1))}>
+          Move up
+        </button>
+        <button type="button" aria-label={`Move ${name} down`} disabled={isLast} onClick={fromMenu(() => onMove(1))}>
+          Move down
+        </button>
+        <button type="button" onClick={fromMenu(() => setEditingSets(true))}>
+          Edit sets
+        </button>
+        <button type="button" className="danger" aria-label={`Remove ${name}`} onClick={fromMenu(onRemove)}>
+          Remove exercise
+        </button>
+      </Sheet>
     </section>
   )
 }

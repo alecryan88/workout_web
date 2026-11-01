@@ -1,6 +1,6 @@
 import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { did, newStore, plan, renderApp, seedWorkout, setToday } from './harness'
+import { did, exerciseAction, newStore, plan, renderApp, seedWorkout, setToday } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -105,27 +105,27 @@ describe('which exercise starts expanded', () => {
 })
 
 describe('reordering with an exercise expanded', () => {
-  it('keeps the same exercise expanded when exercises move or are removed', async () => {
-    const { user, screen } = await openWorkout({
+  it('keeps the same exercise expanded when it moves, and collapses all when it is removed', async () => {
+    const app = await openWorkout({
       exercises: { 'Bench Press': [did(8, 185)], Dips: [plan(10)], Flyes: [plan(12)] },
     })
+    const { screen } = app
     expect(screen.getByRole('button', { name: 'Dips' })).toHaveAttribute('aria-expanded', 'true')
 
-    await user.click(screen.getByRole('button', { name: 'Move Dips up' }))
+    await exerciseAction(app, 'Dips', 'Move Dips up')
     expect(screen.getByRole('button', { name: 'Dips' })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('button', { name: 'Bench Press' })).toHaveAttribute('aria-expanded', 'false')
 
-    await user.click(screen.getByRole('button', { name: 'Move Flyes up' }))
-    expect(screen.getByRole('button', { name: 'Dips' })).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('button', { name: 'Flyes' })).toHaveAttribute('aria-expanded', 'false')
-
-    await user.click(screen.getByRole('button', { name: 'Remove Bench Press' }))
-    await user.click(screen.getByRole('button', { name: 'Move Dips down' }))
+    await exerciseAction(app, 'Dips', 'Move Dips down')
+    await exerciseAction(app, 'Dips', 'Move Dips down')
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Bench Press', 'Flyes', 'Dips'])
     expect(screen.getByRole('button', { name: 'Dips' })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByLabelText('Dips set 1 actual reps')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Remove Dips' }))
+    await exerciseAction(app, 'Dips', 'Remove Dips')
+    expect(screen.queryByRole('heading', { name: 'Dips' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Flyes' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: 'Bench Press' })).toHaveAttribute('aria-expanded', 'false')
   })
 })
 
@@ -142,5 +142,51 @@ describe('adding an exercise', () => {
     expect(screen.getByRole('button', { name: 'Bench Press' })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByLabelText('Add exercise')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '+ Add exercise' })).toBeInTheDocument()
+  })
+})
+
+describe('exercise actions menu', () => {
+  it('offers move, edit sets and remove, with moves disabled at the ends', async () => {
+    const { user, screen } = await openWorkout({
+      exercises: { 'Bench Press': [plan(8, 185)], Dips: [plan(10)] },
+    })
+    expect(screen.queryByRole('button', { name: 'Actions for Dips' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Actions for Bench Press' }))
+    const menu = within(screen.getByRole('dialog', { name: 'Bench Press' }))
+    expect(menu.getByRole('button', { name: 'Move Bench Press up' })).toBeDisabled()
+    expect(menu.getByRole('button', { name: 'Move Bench Press down' })).toBeEnabled()
+    expect(menu.getByRole('button', { name: 'Edit sets' })).toBeInTheDocument()
+    expect(menu.getByRole('button', { name: 'Remove Bench Press' })).toBeInTheDocument()
+
+    await user.click(menu.getByRole('button', { name: 'Move Bench Press down' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Dips', 'Bench Press'])
+
+    await user.click(screen.getByRole('button', { name: 'Actions for Bench Press' }))
+    const again = within(screen.getByRole('dialog', { name: 'Bench Press' }))
+    expect(again.getByRole('button', { name: 'Move Bench Press up' })).toBeEnabled()
+    expect(again.getByRole('button', { name: 'Move Bench Press down' })).toBeDisabled()
+  })
+})
+
+describe('edit sets mode', () => {
+  it('shows set remove buttons only while editing sets, until Done', async () => {
+    const { user, screen } = await openWorkout({
+      exercises: { 'Pull-up': [plan(10), plan(8), plan(6)] },
+    })
+    expect(screen.queryByRole('button', { name: 'Remove Pull-up set 1' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Actions for Pull-up' }))
+    await user.click(screen.getByRole('button', { name: 'Edit sets' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Remove Pull-up set 2' }))
+    expect(screen.getByLabelText('Pull-up set 2 target reps')).toHaveValue(6)
+    expect(screen.queryByLabelText('Pull-up set 3 target reps')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.queryByRole('button', { name: 'Remove Pull-up set 1' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument()
   })
 })

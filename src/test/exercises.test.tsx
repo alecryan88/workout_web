@@ -1,6 +1,6 @@
 import { within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { addExercise, newStore, renderApp, setToday } from './harness'
+import { addExercise, exerciseAction, newStore, renderApp, setToday } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -61,8 +61,9 @@ describe('exercises in a workout', () => {
       await screen.findByRole('heading', { name })
     }
 
-    await user.click(screen.getByRole('button', { name: 'Move Flyes up' }))
-    await user.click(screen.getByRole('button', { name: 'Remove Bench Press' }))
+    await exerciseAction(app, 'Flyes', 'Move Flyes up')
+    await user.click(screen.getByRole('button', { name: 'Bench Press' }))
+    await exerciseAction(app, 'Bench Press', 'Remove Bench Press')
 
     const headings = () => screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
     expect(headings()).toEqual(['Flyes', 'Dips'])
@@ -105,6 +106,7 @@ describe('sets', () => {
     await user.clear(screen.getByLabelText('Pull-up set 3 target reps'))
     await user.type(screen.getByLabelText('Pull-up set 3 target reps'), '6')
 
+    await exerciseAction(app, 'Pull-up', 'Edit sets')
     await user.click(screen.getByRole('button', { name: 'Remove Pull-up set 2' }))
 
     expect(screen.getByLabelText('Pull-up set 1 target weight')).toHaveValue(null)
