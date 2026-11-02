@@ -1,10 +1,9 @@
 export type WorkoutStatus = 'planned' | 'done'
 
 export type SetEntry = {
-  targetReps: number | null
-  targetWeight: number | null
-  actualReps: number | null
-  actualWeight: number | null
+  weight: number | null
+  reps: number | null
+  completed: boolean
 }
 
 export type Exercise = {
@@ -29,18 +28,15 @@ export type Workout = {
 export type WorkoutSummary = Pick<Workout, 'id' | 'date' | 'name' | 'status'> & {
   exerciseCount: number
   setCount: number
-  loggedSetCount: number
+  completedSetCount: number
 }
 
-export const isLogged = (set: Pick<SetEntry, 'actualReps' | 'actualWeight'>) =>
-  set.actualReps !== null || set.actualWeight !== null
-
-export function summaryCounts(exercises: { sets: Pick<SetEntry, 'actualReps' | 'actualWeight'>[] }[]) {
+export function summaryCounts(exercises: { sets: Pick<SetEntry, 'completed'>[] }[]) {
   const sets = exercises.flatMap((e) => e.sets)
   return {
     exerciseCount: exercises.length,
     setCount: sets.length,
-    loggedSetCount: sets.filter(isLogged).length,
+    completedSetCount: sets.filter((s) => s.completed).length,
   }
 }
 
@@ -58,7 +54,8 @@ export type LastPerformance = {
 }
 
 export type CopyOptions = {
-  actualsAsTargets: boolean
+  /** Copy only the ticked sets (with their values) instead of every set. */
+  tickedOnly: boolean
 }
 
 export interface Store {

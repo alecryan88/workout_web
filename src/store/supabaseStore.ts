@@ -3,10 +3,9 @@ import { summaryCounts, type Exercise, type LastPerformance, type Store, type Wo
 
 type SetRow = {
   position: number
-  target_reps: number | null
-  target_weight: number | null
-  actual_reps: number | null
-  actual_weight: number | null
+  weight: number | string | null
+  reps: number | null
+  completed: boolean
 }
 
 type WorkoutRow = {
@@ -27,7 +26,7 @@ type SummaryRow = {
   date: string
   name: string
   status: WorkoutStatus
-  workout_exercises: { sets: { actual_reps: number | null; actual_weight: number | null }[] }[]
+  workout_exercises: { sets: { completed: boolean }[] }[]
 }
 
 const byPosition = (a: { position: number }, b: { position: number }) => a.position - b.position
@@ -62,7 +61,7 @@ export function createSupabaseStore(url: string, key: string): Store {
       const rows = check<SummaryRow[]>(
         await supabase
           .from('workouts')
-          .select('id, date, name, status, workout_exercises(sets(actual_reps, actual_weight))')
+          .select('id, date, name, status, workout_exercises(sets(completed))')
           .gte('date', fromDate)
           .lte('date', toDate)
           .order('date')
@@ -71,11 +70,7 @@ export function createSupabaseStore(url: string, key: string): Store {
       return rows.map(
         ({ workout_exercises, ...workout }): WorkoutSummary => ({
           ...workout,
-          ...summaryCounts(
-            workout_exercises.map((e) => ({
-              sets: e.sets.map((s) => ({ actualReps: s.actual_reps, actualWeight: s.actual_weight })),
-            })),
-          ),
+          ...summaryCounts(workout_exercises),
         }),
       )
     },
@@ -84,7 +79,7 @@ export function createSupabaseStore(url: string, key: string): Store {
         await supabase
           .from('workouts')
           .select(
-            'id, date, name, notes, status, workout_exercises(position, exercise:exercises(id, name), sets(position, target_reps, target_weight, actual_reps, actual_weight))',
+            'id, date, name, notes, status, workout_exercises(position, exercise:exercises(id, name), sets(position, weight, reps, completed))',
           )
           .eq('id', id)
           .maybeSingle<WorkoutRow>(),
@@ -99,10 +94,9 @@ export function createSupabaseStore(url: string, key: string): Store {
         exercises: [...row.workout_exercises].sort(byPosition).map((we) => ({
           exercise: we.exercise,
           sets: [...we.sets].sort(byPosition).map((s) => ({
-            targetReps: s.target_reps,
-            targetWeight: num(s.target_weight),
-            actualReps: s.actual_reps,
-            actualWeight: num(s.actual_weight),
+            weight: num(s.weight),
+            reps: s.reps,
+            completed: s.completed,
           })),
         })),
       }
@@ -122,12 +116,7 @@ export function createSupabaseStore(url: string, key: string): Store {
             status: workout.status,
             exercises: workout.exercises.map((e) => ({
               exercise_id: e.exercise.id,
-              sets: e.sets.map((s) => ({
-                target_reps: s.targetReps,
-                target_weight: s.targetWeight,
-                actual_reps: s.actualReps,
-                actual_weight: s.actualWeight,
-              })),
+              sets: e.sets.map((s) => ({ weight: s.weight, reps: s.reps, completed: s.completed })),
             })),
           },
         }),
@@ -139,8 +128,8 @@ export function createSupabaseStore(url: string, key: string): Store {
     async setStatus(id, status) {
       check(await supabase.from('workouts').update({ status, updated_at: new Date().toISOString() }).eq('id', id))
     },
-    async copyWorkout(id, dates, { actualsAsTargets }) {
-      check(await supabase.rpc('copy_workout', { source_id: id, dates, actuals_as_targets: actualsAsTargets }))
+    async copyWorkout(id, dates, { tickedOnly }) {
+      check(await supabase.rpc('copy_workout', { source_id: id, dates, ticked_only: tickedOnly }))
     },
     async searchExercises(prefix) {
       const needle = prefix.trim()

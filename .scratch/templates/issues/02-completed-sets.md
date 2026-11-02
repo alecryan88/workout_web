@@ -4,11 +4,15 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Migration converts existing sets as specified
-- [ ] Both stores and the RPCs use the new set shape
-- [ ] All exercises render expanded; ✓ toggles completed; values editable before and after ticking
-- [ ] Week cards and dots count completed sets
-- [ ] Copy uses ticked values when chosen and creates unticked sets
-- [ ] Tests updated and passing
+- [x] Migration converts existing sets as specified
+- [x] Both stores and the RPCs use the new set shape
+- [x] All exercises render expanded; ✓ toggles completed; values editable before and after ticking
+- [x] Week cards and dots count completed sets
+- [x] Copy uses ticked values when chosen and creates unticked sets
+- [x] Tests updated and passing
+
+## Comments
+
+- Copy's option is "Copy ticked values only": when checked, only ticked sets are copied (with their lbs/reps); when unchecked, every set is copied with its current values. Copies always start unticked. With a single lbs × reps pair there is no separate plan to fall back to, so this was the only meaningful reading of "copy ticked values"; revisit in triage.

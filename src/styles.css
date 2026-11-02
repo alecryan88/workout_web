@@ -239,66 +239,17 @@ label.checkbox input {
 }
 
 .exercise-header {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  grid-template-areas:
-    'name chevron tools'
-    'summary chevron tools';
+  display: flex;
   align-items: center;
-  column-gap: 8px;
+  justify-content: space-between;
+  gap: 8px;
   min-height: var(--tap);
 }
 
 .exercise-header h3 {
-  grid-area: name;
   margin: 0;
-  font-size: 1.05rem;
-}
-
-.exercise-toggle {
-  min-height: 0;
-  padding: 0;
-  background: transparent;
+  font-size: 1.15rem;
   color: var(--accent);
-  font-weight: 600;
-  text-align: left;
-}
-
-.exercise-toggle::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-
-.exercise-summary {
-  grid-area: summary;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 8px;
-  margin: 2px 0 0;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
-.exercise-summary .last {
-  margin: 0;
-}
-
-.exercise-done {
-  color: var(--done);
-  font-weight: 700;
-}
-
-.chevron {
-  grid-area: chevron;
-  color: var(--text-secondary);
-  font-size: 1.4rem;
-  transition: transform 0.15s;
-}
-
-.chevron.open {
-  transform: rotate(90deg);
 }
 
 .visually-hidden {
@@ -625,16 +576,10 @@ button.add-workout {
 }
 
 .exercise-card {
-  background: var(--card);
-  border-radius: var(--radius-card);
-  padding: 12px 16px;
-  margin: 12px 0;
+  margin: 20px 0 28px;
 }
 
 .exercise-tools {
-  grid-area: tools;
-  position: relative;
-  z-index: 1;
   display: flex;
 }
 
@@ -643,9 +588,8 @@ button.add-workout {
   font-weight: 600;
 }
 
-button.chip,
-.exercise-tools button.icon {
-  min-height: 36px;
+button.chip {
+  min-height: 44px;
   min-width: 48px;
   padding: 0 12px;
   border-radius: 10px;
@@ -653,10 +597,6 @@ button.chip,
   color: var(--accent);
   font-size: 1rem;
   letter-spacing: 0.05em;
-}
-
-.exercise-body {
-  margin-top: 12px;
 }
 
 button.add-exercise {
@@ -681,65 +621,68 @@ button.add-exercise {
 
 .set-row {
   display: grid;
-  grid-template-columns: 28px 1fr 1fr 40px;
+  grid-template-columns: 40px 1fr 1fr 48px;
   align-items: center;
-  gap: 6px;
-  padding: 2px 4px;
+  gap: 8px;
+  padding: 3px 0;
   border-radius: var(--radius);
 }
 
 .set-row.editing {
-  grid-template-columns: 28px 1fr 1fr 40px 32px;
+  grid-template-columns: 40px 1fr 1fr 48px 32px;
 }
 
-.set-row.logged {
+.set-row.completed {
   background: var(--done-tint);
 }
 
 .set-head {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+
+.set-head > span:first-child {
+  text-align: left;
+  padding-left: 6px;
 }
 
 .set-number {
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.pair {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.pair input {
-  padding: 8px 4px;
-  text-align: center;
-  min-width: 0;
+  display: grid;
+  place-items: center;
+  height: 40px;
+  border-radius: 8px;
   background: var(--well);
-  border-color: transparent;
-}
-
-.pair.target input {
-  padding: 6px 2px;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.pair.actual input {
-  color: var(--text);
   font-weight: 600;
 }
 
-.set-row.logged .pair input {
+.set-row input {
+  min-height: 40px;
+  padding: 6px 4px;
+  text-align: center;
+  min-width: 0;
+  font-weight: 600;
+  background: var(--well);
+}
+
+.set-row.completed input,
+.set-row.completed .set-number {
   background: transparent;
 }
 
-.times {
-  color: var(--text-secondary);
-  font-size: 0.8rem;
+button.tick {
+  min-height: 40px;
+  padding: 0;
+  border-radius: 8px;
+  background: var(--well);
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+button.tick[aria-pressed='true'] {
+  background: var(--done);
+  color: var(--on-accent);
 }
 
 .set-row button.icon {
@@ -748,15 +691,12 @@ button.add-exercise {
   font-size: 1rem;
 }
 
-button.hit {
-  color: var(--done);
-}
-
 .add-set {
   width: 100%;
-  background: transparent;
-  border: 1px dashed var(--separator);
-  color: var(--accent);
+  min-height: 40px;
+  background: var(--well);
+  color: var(--text);
+  font-weight: 600;
 }
 
 .exercise-picker {

@@ -125,7 +125,7 @@ describe('week view', () => {
     expect(screen.getByRole('link', { name: /Missed Pull/ })).toHaveTextContent(/not done/i)
   })
 
-  it('shows exercise and logged set counts with progress on each card', async () => {
+  it('shows exercise and completed set counts with progress on each card', async () => {
     setToday('2026-11-04')
     const store = newStore()
     await seedWorkout(store, {

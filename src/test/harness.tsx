@@ -25,7 +25,7 @@ export async function renderApp(store: Store) {
 
 export type App = Awaited<ReturnType<typeof renderApp>>
 
-type SeedSet = { target?: [number | null, number | null]; actual?: [number | null, number | null] }
+type SeedSet = { weight: number | null; reps: number | null; completed: boolean }
 
 type SeedWorkout = {
   date: string
@@ -42,20 +42,17 @@ export async function seedWorkout(store: Store, seed: SeedWorkout) {
   for (const [name, sets] of Object.entries(seed.exercises ?? {})) {
     exercises.push({
       exercise: await store.findOrCreateExercise(name),
-      sets: sets.map((s) => ({
-        targetReps: s.target?.[0] ?? null,
-        targetWeight: s.target?.[1] ?? null,
-        actualReps: s.actual?.[0] ?? null,
-        actualWeight: s.actual?.[1] ?? null,
-      })),
+      sets: sets.map((s) => ({ ...s })),
     })
   }
   await store.saveWorkout({ ...workout, notes: seed.notes ?? '', status: seed.status ?? 'planned', exercises })
   return id
 }
 
-export const did = (reps: number | null, weight: number | null = null): SeedSet => ({ actual: [reps, weight] })
-export const plan = (reps: number | null, weight: number | null = null): SeedSet => ({ target: [reps, weight] })
+/** A completed (ticked) set. */
+export const did = (reps: number | null, weight: number | null = null): SeedSet => ({ reps, weight, completed: true })
+/** An unticked set holding planned values. */
+export const plan = (reps: number | null, weight: number | null = null): SeedSet => ({ reps, weight, completed: false })
 
 export async function openWorkoutSheet(app: App, item: 'Edit details' | 'Copy' | 'Delete') {
   await app.user.click(app.screen.getByRole('button', { name: 'Workout actions' }))

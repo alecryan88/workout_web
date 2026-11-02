@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { dayLabel } from './dates'
 
 type Props = {
-  onCopy: (dates: string[], actualsAsTargets: boolean) => Promise<void>
+  onCopy: (dates: string[], tickedOnly: boolean) => Promise<void>
 }
 
 const plural = (n: number) => (n === 1 ? '1 date' : `${n} dates`)
@@ -10,7 +10,7 @@ const plural = (n: number) => (n === 1 ? '1 date' : `${n} dates`)
 export default function CopyPanel({ onCopy }: Props) {
   const [draft, setDraft] = useState('')
   const [dates, setDates] = useState<string[]>([])
-  const [actualsAsTargets, setActualsAsTargets] = useState(false)
+  const [tickedOnly, setTickedOnly] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -24,7 +24,7 @@ export default function CopyPanel({ onCopy }: Props) {
     setBusy(true)
     setError(null)
     try {
-      await onCopy(dates, actualsAsTargets)
+      await onCopy(dates, tickedOnly)
       setMessage(`Copied to ${plural(dates.length)}`)
       setDates([])
     } catch {
@@ -55,8 +55,8 @@ export default function CopyPanel({ onCopy }: Props) {
         </ul>
       )}
       <label className="checkbox">
-        <input type="checkbox" checked={actualsAsTargets} onChange={(e) => setActualsAsTargets(e.target.checked)} />
-        Use actuals as new targets
+        <input type="checkbox" checked={tickedOnly} onChange={(e) => setTickedOnly(e.target.checked)} />
+        Copy ticked values only
       </label>
       <button type="button" className="primary" disabled={dates.length === 0 || busy} onClick={copy}>
         Copy to {plural(dates.length)}

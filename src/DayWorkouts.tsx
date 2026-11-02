@@ -32,19 +32,19 @@ export default function DayWorkouts({ date, today, workouts, onAdd }: Props) {
                   {missed && <span className="badge">Not done</span>}
                 </span>
                 <span className="workout-counts">
-                  {w.exerciseCount} {w.exerciseCount === 1 ? 'exercise' : 'exercises'} · {w.loggedSetCount}/{w.setCount} sets
+                  {w.exerciseCount} {w.exerciseCount === 1 ? 'exercise' : 'exercises'} · {w.completedSetCount}/{w.setCount} sets
                 </span>
                 <span
                   className="progress"
                   role="progressbar"
-                  aria-label="Logged sets"
+                  aria-label="Completed sets"
                   aria-valuemin={0}
                   aria-valuemax={w.setCount}
-                  aria-valuenow={w.loggedSetCount}
+                  aria-valuenow={w.completedSetCount}
                 >
                   <span
                     className="progress-fill"
-                    style={{ width: `${w.setCount === 0 ? 0 : (w.loggedSetCount / w.setCount) * 100}%` }}
+                    style={{ width: `${w.setCount === 0 ? 0 : (w.completedSetCount / w.setCount) * 100}%` }}
                   />
                 </span>
               </Link>

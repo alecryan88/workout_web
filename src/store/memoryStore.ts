@@ -51,7 +51,7 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
       const workout = workouts.get(workoutId)
       if (workout) workout.status = status
     },
-    async copyWorkout(workoutId, dates, { actualsAsTargets }) {
+    async copyWorkout(workoutId, dates, { tickedOnly }) {
       const source = workouts.get(workoutId)
       if (!source) throw new Error('Workout not found')
       for (const date of dates) {
@@ -60,7 +60,7 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
           id: id(),
           date,
           status: 'planned',
-          exercises: copyExercises(source, actualsAsTargets),
+          exercises: copyExercises(source, tickedOnly),
         }
         workouts.set(copy.id, copy)
       }
@@ -89,8 +89,8 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
         const sets = workout.exercises
           .filter((e) => e.exercise.id === exerciseId)
           .flatMap((e) => e.sets)
-          .filter((s) => s.actualReps !== null)
-          .map((s) => ({ reps: s.actualReps, weight: s.actualWeight }))
+          .filter((s) => s.completed)
+          .map((s) => ({ reps: s.reps, weight: s.weight }))
         if (sets.length > 0) return { date: workout.date, sets }
       }
       return null

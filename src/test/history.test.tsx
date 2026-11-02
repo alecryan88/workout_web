@@ -15,7 +15,7 @@ async function openToday(store: Store) {
 }
 
 describe('last performance', () => {
-  it('shows actuals from the most recent completed workout before this one', async () => {
+  it('shows completed sets from the most recent completed workout before this one', async () => {
     setToday('2026-11-04')
     const store = newStore()
     await seedWorkout(store, { date: '2026-10-20', name: 'Old', status: 'done', exercises: { 'Bench Press': [did(5, 175), did(5, 175)] } })
@@ -23,7 +23,7 @@ describe('last performance', () => {
       date: '2026-10-27',
       name: 'Recent',
       status: 'done',
-      exercises: { 'Bench Press': [{ target: [10, 200], actual: [8, 185] }, did(8, 185), did(8, 185)] },
+      exercises: { 'Bench Press': [did(8, 185), did(8, 185), did(8, 185), plan(10, 200)] },
     })
     await seedWorkout(store, { date: '2026-10-30', name: 'Missed', status: 'planned', exercises: { 'Bench Press': [did(1, 300)] } })
     await seedWorkout(store, { date: '2026-11-06', name: 'Future', status: 'done', exercises: { 'Bench Press': [did(2, 400)] } })
@@ -44,7 +44,7 @@ describe('last performance', () => {
       exercises: {
         'Bench Press': [did(8, 185), did(8, 185), did(6, 185)],
         Squat: [did(5, 225), did(5, 245), did(3, 265)],
-        'Pull-up': [did(10), did(10), did(null)],
+        'Pull-up': [did(10), did(10), plan(12)],
       },
     })
     await seedWorkout(store, { date: '2026-11-04', name: 'Today', exercises: { 'Bench Press': [], Squat: [], 'Pull-up': [] } })
