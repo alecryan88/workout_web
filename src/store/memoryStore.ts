@@ -57,7 +57,7 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
       return withCurrentExercises(structuredClone(workout))
     },
     async createWorkout(date, name) {
-      const workout: Workout = { id: id(), date, name, notes: '', status: 'planned', exercises: [] }
+      const workout: Workout = { id: id(), date, name, notes: '', status: 'planned', templateId: null, exercises: [] }
       workouts.set(workout.id, workout)
       return workout.id
     },
@@ -81,6 +81,7 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
           id: id(),
           date,
           status: 'planned',
+          templateId: null,
           exercises: copyExercises(source, tickedOnly),
         }
         workouts.set(copy.id, copy)
@@ -147,6 +148,28 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
     },
     async deleteTemplate(templateId) {
       templates.delete(templateId)
+      for (const workout of workouts.values()) if (workout.templateId === templateId) workout.templateId = null
+    },
+    async scheduleTemplate(templateId, dates) {
+      const template = templates.get(templateId)
+      if (!template) throw new Error('Template not found')
+      return [...dates].sort().map((date) => {
+        const workout: Workout = {
+          id: id(),
+          date,
+          name: template.name,
+          notes: template.notes,
+          status: 'planned',
+          templateId,
+          exercises: template.exercises.map((e) => ({
+            exercise: { ...e.exercise },
+            restSeconds: e.restSeconds,
+            sets: e.sets.map(({ weight, reps }) => ({ weight, reps, completed: false })),
+          })),
+        }
+        workouts.set(workout.id, workout)
+        return workout.id
+      })
     },
     async createTemplateFromWorkout(workoutId) {
       const workout = workouts.get(workoutId)

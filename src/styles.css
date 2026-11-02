@@ -1033,3 +1033,39 @@ button.add-exercise {
   background: var(--accent-tint);
   color: var(--accent);
 }
+
+.segmented,
+.weekday-toggles {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius);
+  background: var(--fill);
+}
+
+.segmented button,
+.weekday-toggles button {
+  min-height: 40px;
+  padding: 0 4px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--card);
+}
+
+.weekday-toggles button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.schedule-count {
+  margin: 4px 0 0;
+  text-align: center;
+  font-weight: 600;
+}

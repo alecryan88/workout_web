@@ -52,6 +52,7 @@ type WorkoutRow = {
   name: string
   notes: string | null
   status: WorkoutStatus
+  template_id: string | null
   workout_exercises: {
     position: number
     rest_seconds: number
@@ -130,7 +131,7 @@ export function createSupabaseStore(url: string, key: string): Store {
         await supabase
           .from('workouts')
           .select(
-            `id, date, name, notes, status, workout_exercises(position, rest_seconds, exercise:exercises(${EXERCISE_COLUMNS}), sets(position, weight, reps, completed))`,
+            `id, date, name, notes, status, template_id, workout_exercises(position, rest_seconds, exercise:exercises(${EXERCISE_COLUMNS}), sets(position, weight, reps, completed))`,
           )
           .eq('id', id)
           .maybeSingle<WorkoutRow>(),
@@ -142,6 +143,7 @@ export function createSupabaseStore(url: string, key: string): Store {
         name: row.name,
         notes: row.notes ?? '',
         status: row.status,
+        templateId: row.template_id,
         exercises: [...row.workout_exercises].sort(byPosition).map((we) => ({
           exercise: toExercise(we.exercise),
           restSeconds: we.rest_seconds,
@@ -265,6 +267,9 @@ export function createSupabaseStore(url: string, key: string): Store {
     },
     async deleteTemplate(id) {
       check(await supabase.from('templates').delete().eq('id', id))
+    },
+    async scheduleTemplate(templateId, dates) {
+      return check<string[]>(await supabase.rpc('schedule_template', { p_template_id: templateId, dates: [...dates].sort() }))
     },
     async createTemplateFromWorkout(workoutId) {
       return check<string>(await supabase.rpc('create_template_from_workout', { p_workout_id: workoutId }))

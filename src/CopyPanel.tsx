@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { dayLabel } from './dates'
+import DateChips from './DateChips'
 
 type Props = {
   onCopy: (dates: string[], tickedOnly: boolean) => Promise<void>
@@ -8,17 +8,11 @@ type Props = {
 const plural = (n: number) => (n === 1 ? '1 date' : `${n} dates`)
 
 export default function CopyPanel({ onCopy }: Props) {
-  const [draft, setDraft] = useState('')
   const [dates, setDates] = useState<string[]>([])
   const [tickedOnly, setTickedOnly] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-
-  const addDate = () => {
-    if (draft && !dates.includes(draft)) setDates([...dates, draft].sort())
-    setDraft('')
-  }
 
   const copy = async () => {
     setBusy(true)
@@ -36,24 +30,7 @@ export default function CopyPanel({ onCopy }: Props) {
 
   return (
     <div className="copy-panel">
-      <div className="picker-row">
-        <input type="date" aria-label="Copy to date" value={draft} onChange={(e) => setDraft(e.target.value)} />
-        <button type="button" onClick={addDate} disabled={!draft}>
-          Add date
-        </button>
-      </div>
-      {dates.length > 0 && (
-        <ul className="chips">
-          {dates.map((d) => (
-            <li key={d}>
-              {dayLabel(d)}
-              <button type="button" className="icon" aria-label={`Remove ${dayLabel(d)}`} onClick={() => setDates(dates.filter((x) => x !== d))}>
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <DateChips label="Copy to date" dates={dates} onChange={setDates} />
       <label className="checkbox">
         <input type="checkbox" checked={tickedOnly} onChange={(e) => setTickedOnly(e.target.checked)} />
         Copy ticked values only

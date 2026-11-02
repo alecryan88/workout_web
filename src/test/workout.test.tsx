@@ -13,6 +13,7 @@ describe('creating and editing a workout', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Thu Nov 5' }))
     await user.click(screen.getByRole('button', { name: 'Add workout' }))
+    await user.click(screen.getByRole('button', { name: 'Empty workout' }))
     await screen.findByRole('button', { name: 'Workout actions' })
     await openWorkoutSheet(app, 'Edit details')
     const name = screen.getByLabelText('Workout name')

@@ -72,6 +72,8 @@ export type Workout = {
   name: string
   notes: string
   status: WorkoutStatus
+  /** The template this workout was scheduled from, for reference only (no live sync). */
+  templateId: string | null
   exercises: WorkoutExercise[]
 }
 
@@ -138,6 +140,8 @@ export interface Store {
   saveTemplate(template: Template): Promise<string>
   /** Deletes the template. Workouts scheduled from it are left alone. */
   deleteTemplate(id: string): Promise<void>
+  /** Creates one planned, unticked snapshot workout per date from the template. Returns the new workout ids in date order. */
+  scheduleTemplate(templateId: string, dates: string[]): Promise<string[]>
   /** Creates a template from a workout's name, notes, exercises, set values and rest times. Returns its id. */
   createTemplateFromWorkout(workoutId: string): Promise<string>
   lastPerformance(exerciseId: string, beforeDate: string): Promise<LastPerformance | null>

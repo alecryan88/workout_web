@@ -189,6 +189,7 @@ describe('week view', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Fri Nov 6' }))
     await user.click(screen.getByRole('button', { name: 'Add workout' }))
+    await user.click(screen.getByRole('button', { name: 'Empty workout' }))
     await screen.findByRole('button', { name: 'Workout actions' })
     await openWorkoutSheet(app, 'Edit details')
     expect(screen.getByLabelText('Date')).toHaveValue('2026-11-06')

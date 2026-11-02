@@ -4,11 +4,12 @@ import { addDays, today } from './dates'
 import ExerciseBlock from './ExerciseBlock'
 import ExercisePicker from './ExercisePicker'
 import { moveItem, removeItem, replaceItem } from './listOps'
+import SchedulePanel from './SchedulePanel'
 import Sheet from './Sheet'
 import { useStore } from './store/context'
 import { DEFAULT_REST_SECONDS, type PlannedSet, type Template, type TemplateExercise } from './store/types'
 
-type EditorSheet = 'none' | 'actions' | 'details' | 'delete' | 'discard'
+type EditorSheet = 'none' | 'actions' | 'details' | 'schedule' | 'delete' | 'discard'
 
 const blankTemplate = (): Template => ({ id: null, name: 'New Template', notes: '', exercises: [] })
 
@@ -68,6 +69,18 @@ export default function TemplateEditor() {
     }
   }
 
+  /** Scheduling snapshots the saved template, so unsaved edits are saved first. */
+  const schedule = async (dates: string[]) => {
+    let templateId = draft.id
+    if (templateId === null || dirty) {
+      templateId = await store.saveTemplate(draft)
+      const savedDraft = { ...draft, id: templateId }
+      setDraft(savedDraft)
+      setSaved(JSON.stringify(savedDraft))
+    }
+    await store.scheduleTemplate(templateId, dates)
+  }
+
   const remove = async () => {
     try {
       if (draft.id !== null) await store.deleteTemplate(draft.id)
@@ -122,6 +135,9 @@ export default function TemplateEditor() {
         <button type="button" onClick={() => setSheet('details')}>
           Edit name & notes
         </button>
+        <button type="button" onClick={() => setSheet('schedule')}>
+          Add to calendar
+        </button>
         <button type="button" className="danger" onClick={() => setSheet('delete')}>
           Delete
         </button>
@@ -136,6 +152,10 @@ export default function TemplateEditor() {
           Notes
           <textarea rows={3} value={draft.notes} onChange={(e) => update({ notes: e.target.value })} />
         </label>
+      </Sheet>
+
+      <Sheet open={sheet === 'schedule'} title="Add to calendar" onClose={closeSheet} cancelLabel="Close">
+        <SchedulePanel onSchedule={schedule} />
       </Sheet>
 
       <Sheet open={sheet === 'delete'} title="Delete template" onClose={closeSheet}>

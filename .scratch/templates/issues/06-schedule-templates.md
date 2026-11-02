@@ -4,10 +4,16 @@
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Single-date and weekdays × weeks modes produce the right dates and count
-- [ ] Scheduled workouts copy name, notes, exercises, sets and rest times, unticked
-- [ ] Editing the template afterwards doesn't change scheduled workouts
-- [ ] Week "+ Add workout" can start from a template
-- [ ] Tests cover the above
+- [x] Single-date and weekdays × weeks modes produce the right dates and count
+- [x] Scheduled workouts copy name, notes, exercises, sets and rest times, unticked
+- [x] Editing the template afterwards doesn't change scheduled workouts
+- [x] Week "+ Add workout" can start from a template
+- [x] Tests cover the above
+
+## Comments
+
+- Weekly mode counts N Monday-based weeks starting with the week that contains the start date; days in that first week before the start date are skipped (Mon & Thu × 3 weeks from Wed Nov 4 → Nov 5, 9, 12, 16, 19). Weeks are capped at 52.
+- Scheduling from the template editor saves unsaved edits first, so the snapshot matches what's on screen.
+- "From template…" on the week view opens the new workout straight away, like "Empty workout".

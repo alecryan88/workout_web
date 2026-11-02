@@ -6,7 +6,7 @@ import WeekHeader from './WeekHeader'
 import { addDays, startOfWeek, today, weekDays } from './dates'
 import Sheet from './Sheet'
 import { useStore } from './store/context'
-import type { WorkoutSummary } from './store/types'
+import type { TemplateSummary, WorkoutSummary } from './store/types'
 
 type Props = { onSignOut: () => void }
 
@@ -24,15 +24,33 @@ export default function WeekView({ onSignOut }: Props) {
   const [error, setError] = useState<string | null>(null)
   const touchStart = useRef<number | null>(null)
   const navigate = useNavigate()
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [sheet, setSheet] = useState<'none' | 'settings' | 'add' | 'choose'>('none')
+  const [templates, setTemplates] = useState<TemplateSummary[] | null>(null)
+  const closeSheet = () => setSheet('none')
 
-  const addWorkout = async () => {
+  const create = async (makeWorkout: () => Promise<string>) => {
+    closeSheet()
     try {
-      const id = await store.createWorkout(selected, 'Workout')
-      navigate(`/workout/${id}`)
+      navigate(`/workout/${await makeWorkout()}`)
     } catch {
       setError('Could not create workout. Check your connection.')
     }
+  }
+
+  const addEmpty = () => create(() => store.createWorkout(selected, 'Workout'))
+  const addFromTemplate = (templateId: string) =>
+    create(async () => (await store.scheduleTemplate(templateId, [selected]))[0])
+
+  const chooseTemplate = () => {
+    setSheet('choose')
+    setTemplates(null)
+    store
+      .listTemplates()
+      .then(setTemplates)
+      .catch(() => {
+        closeSheet()
+        setError('Could not load templates. Check your connection.')
+      })
   }
 
   useEffect(() => {
@@ -77,19 +95,35 @@ export default function WeekView({ onSignOut }: Props) {
         onPrevious={() => goTo(addDays(monday, -7))}
         onNext={() => goTo(addDays(monday, 7))}
         trailing={
-          <button type="button" className="icon gear" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
+          <button type="button" className="icon gear" aria-label="Settings" onClick={() => setSheet('settings')}>
             ⚙
           </button>
         }
       />
-      <Sheet open={settingsOpen} title="Settings" onClose={() => setSettingsOpen(false)}>
+      <Sheet open={sheet === 'settings'} title="Settings" onClose={closeSheet}>
         <button type="button" className="danger" onClick={onSignOut}>
           Log out
         </button>
       </Sheet>
+      <Sheet open={sheet === 'add'} title="Add workout" onClose={closeSheet}>
+        <button type="button" onClick={chooseTemplate}>
+          From template…
+        </button>
+        <button type="button" onClick={addEmpty}>
+          Empty workout
+        </button>
+      </Sheet>
+      <Sheet open={sheet === 'choose'} title="Choose a template" onClose={closeSheet}>
+        {templates?.length === 0 && <p className="rest">No templates yet. Create one in the Templates tab.</p>}
+        {templates?.map((t) => (
+          <button key={t.id} type="button" onClick={() => addFromTemplate(t.id)}>
+            {t.name}
+          </button>
+        ))}
+      </Sheet>
       <DayStrip days={days} selected={selected} today={todayIso} workouts={workouts ?? []} onSelect={select} />
       {error && <p role="alert" className="error">{error}</p>}
-      <DayWorkouts date={selected} today={todayIso} workouts={workouts} onAdd={addWorkout} />
+      <DayWorkouts date={selected} today={todayIso} workouts={workouts} onAdd={() => setSheet('add')} />
     </main>
   )
 }

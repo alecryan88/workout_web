@@ -335,3 +335,46 @@ revoke execute on function public.save_template(jsonb) from public, anon;
 revoke execute on function public.create_template_from_workout(uuid) from public, anon;
 grant execute on function public.save_template(jsonb) to authenticated;
 grant execute on function public.create_template_from_workout(uuid) to authenticated;
+
+-- Creates one planned, unticked snapshot workout per date. Returns the new ids in date order.
+create function public.schedule_template(p_template_id uuid, dates date[])
+returns uuid[]
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  d date;
+  new_id uuid;
+  ids uuid[] := '{}';
+  te record;
+  new_we uuid;
+begin
+  if not exists (select 1 from templates where id = p_template_id) then
+    raise exception 'Template not found';
+  end if;
+
+  foreach d in array coalesce((select array_agg(x order by x) from unnest(dates) as x), '{}') loop
+    insert into workouts (date, name, notes, status, template_id)
+    select d, name, notes, 'planned', id from templates where id = p_template_id
+    returning id into new_id;
+    ids := ids || new_id;
+
+    for te in
+      select id, exercise_id, position, rest_seconds from template_exercises where template_id = p_template_id order by position
+    loop
+      insert into workout_exercises (workout_id, exercise_id, position, rest_seconds)
+      values (new_id, te.exercise_id, te.position, te.rest_seconds)
+      returning id into new_we;
+
+      insert into sets (workout_exercise_id, position, weight, reps, completed)
+      select new_we, position, weight, reps, false from template_sets where template_exercise_id = te.id;
+    end loop;
+  end loop;
+
+  return ids;
+end;
+$$;
+
+revoke execute on function public.schedule_template(uuid, date[]) from public, anon;
+grant execute on function public.schedule_template(uuid, date[]) to authenticated;
