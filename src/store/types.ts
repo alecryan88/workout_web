@@ -1,10 +1,16 @@
 export type WorkoutStatus = 'planned' | 'done'
 
-export type SetEntry = {
+/** A planned lbs × reps pair, as held by a template. */
+export type PlannedSet = {
   weight: number | null
   reps: number | null
+}
+
+export type SetEntry = PlannedSet & {
   completed: boolean
 }
+
+export const DEFAULT_REST_SECONDS = 120
 
 export const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other'] as const
 export type Equipment = (typeof EQUIPMENT)[number]
@@ -36,7 +42,28 @@ export class DuplicateExerciseError extends Error {
 
 export type WorkoutExercise = {
   exercise: Exercise
+  restSeconds: number
   sets: SetEntry[]
+}
+
+export type TemplateExercise = {
+  exercise: Exercise
+  restSeconds: number
+  sets: PlannedSet[]
+}
+
+export type Template = {
+  /** null for a template that hasn't been saved yet. */
+  id: string | null
+  name: string
+  notes: string
+  exercises: TemplateExercise[]
+}
+
+export type TemplateSummary = {
+  id: string
+  name: string
+  exerciseCount: number
 }
 
 export type Workout = {
@@ -105,5 +132,13 @@ export interface Store {
   updateExercise(exercise: Exercise): Promise<void>
   /** Removes an unused exercise, or archives one used by a workout or template. */
   deleteExercise(id: string): Promise<'deleted' | 'archived'>
+  listTemplates(): Promise<TemplateSummary[]>
+  getTemplate(id: string): Promise<Template | null>
+  /** Creates the template when its id is null, otherwise replaces it. Returns its id. */
+  saveTemplate(template: Template): Promise<string>
+  /** Deletes the template. Workouts scheduled from it are left alone. */
+  deleteTemplate(id: string): Promise<void>
+  /** Creates a template from a workout's name, notes, exercises, set values and rest times. Returns its id. */
+  createTemplateFromWorkout(workoutId: string): Promise<string>
   lastPerformance(exerciseId: string, beforeDate: string): Promise<LastPerformance | null>
 }

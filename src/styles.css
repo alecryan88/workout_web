@@ -947,3 +947,89 @@ main.tab-screen {
   display: grid;
   gap: 8px;
 }
+
+.set-row.no-tick {
+  grid-template-columns: 40px minmax(0, 1.4fr) 1fr 1fr;
+}
+
+.set-row.no-tick.editing {
+  grid-template-columns: 40px minmax(0, 1.4fr) 1fr 1fr 32px;
+}
+
+.sets {
+  gap: 0;
+}
+
+.set-head {
+  padding-bottom: 6px;
+}
+
+.rest-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.rest-divider::before,
+.rest-divider::after {
+  content: '';
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent-tint);
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 4px;
+}
+
+.title-row h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nav-title-text {
+  max-width: 100%;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-header .close {
+  justify-self: start;
+  background: var(--well);
+  color: var(--text);
+}
+
+.editor-header .save {
+  justify-self: end;
+}
+
+.template-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.template-card {
+  display: grid;
+  gap: 4px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+button.add-exercise {
+  text-align: center;
+  background: var(--accent-tint);
+  color: var(--accent);
+}

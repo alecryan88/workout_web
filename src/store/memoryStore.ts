@@ -1,5 +1,5 @@
 import { copyExercises } from './copy'
-import { DuplicateExerciseError, summaryCounts, type Exercise, type ExerciseInput, type Store, type Workout } from './types'
+import { DuplicateExerciseError, summaryCounts, type Exercise, type ExerciseInput, type Store, type Template, type Workout } from './types'
 
 type Options = {
   email: string
@@ -12,6 +12,7 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
   let nextId = 1
   const workouts = new Map<string, Workout>()
   const exercises: (Exercise & { archived: boolean })[] = []
+  const templates = new Map<string, Template & { id: string }>()
 
   const id = () => String(nextId++)
 
@@ -24,11 +25,15 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
     if (exercises.some((e) => e.id !== exceptId && sameKey(e, candidate))) throw new DuplicateExerciseError()
   }
   const isUsed = (exerciseId: string) =>
-    [...workouts.values()].some((w) => w.exercises.some((e) => e.exercise.id === exerciseId))
+    [...workouts.values(), ...templates.values()].some((w) => w.exercises.some((e) => e.exercise.id === exerciseId))
   const current = (exercise: Exercise): Exercise => {
     const record = exercises.find((e) => e.id === exercise.id)
     return record ? publicExercise(record) : exercise
   }
+  const withCurrentExercises = <T extends { exercises: { exercise: Exercise }[] }>(value: T): T => ({
+    ...value,
+    exercises: value.exercises.map((e) => ({ ...e, exercise: current(e.exercise) })),
+  })
 
   return {
     async hasSession() {
@@ -49,8 +54,7 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
     async getWorkout(workoutId) {
       const workout = workouts.get(workoutId)
       if (!workout) return null
-      const copy = structuredClone(workout)
-      return { ...copy, exercises: copy.exercises.map((e) => ({ ...e, exercise: current(e.exercise) })) }
+      return withCurrentExercises(structuredClone(workout))
     },
     async createWorkout(date, name) {
       const workout: Workout = { id: id(), date, name, notes: '', status: 'planned', exercises: [] }
@@ -125,6 +129,38 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
       }
       exercises.splice(index, 1)
       return 'deleted'
+    },
+    async listTemplates() {
+      return [...templates.values()]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(({ id, name, exercises }) => ({ id, name, exerciseCount: exercises.length }))
+    },
+    async getTemplate(templateId) {
+      const template = templates.get(templateId)
+      return template ? withCurrentExercises(structuredClone(template)) : null
+    },
+    async saveTemplate(template) {
+      if (template.id !== null && !templates.has(template.id)) throw new Error('Template not found')
+      const saved = { ...structuredClone(template), id: template.id ?? id() }
+      templates.set(saved.id, saved)
+      return saved.id
+    },
+    async deleteTemplate(templateId) {
+      templates.delete(templateId)
+    },
+    async createTemplateFromWorkout(workoutId) {
+      const workout = workouts.get(workoutId)
+      if (!workout) throw new Error('Workout not found')
+      return this.saveTemplate({
+        id: null,
+        name: workout.name,
+        notes: workout.notes,
+        exercises: workout.exercises.map((e) => ({
+          exercise: { ...e.exercise },
+          restSeconds: e.restSeconds,
+          sets: e.sets.map(({ weight, reps }) => ({ weight, reps })),
+        })),
+      })
     },
     async lastPerformance(exerciseId, beforeDate) {
       const candidates = [...workouts.values()]

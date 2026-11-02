@@ -54,8 +54,21 @@ type WorkoutRow = {
   status: WorkoutStatus
   workout_exercises: {
     position: number
+    rest_seconds: number
     exercise: ExerciseRow
     sets: SetRow[]
+  }[]
+}
+
+type TemplateRow = {
+  id: string
+  name: string
+  notes: string | null
+  template_exercises: {
+    position: number
+    rest_seconds: number
+    exercise: ExerciseRow
+    template_sets: { position: number; weight: number | string | null; reps: number | null }[]
   }[]
 }
 
@@ -117,7 +130,7 @@ export function createSupabaseStore(url: string, key: string): Store {
         await supabase
           .from('workouts')
           .select(
-            `id, date, name, notes, status, workout_exercises(position, exercise:exercises(${EXERCISE_COLUMNS}), sets(position, weight, reps, completed))`,
+            `id, date, name, notes, status, workout_exercises(position, rest_seconds, exercise:exercises(${EXERCISE_COLUMNS}), sets(position, weight, reps, completed))`,
           )
           .eq('id', id)
           .maybeSingle<WorkoutRow>(),
@@ -131,6 +144,7 @@ export function createSupabaseStore(url: string, key: string): Store {
         status: row.status,
         exercises: [...row.workout_exercises].sort(byPosition).map((we) => ({
           exercise: toExercise(we.exercise),
+          restSeconds: we.rest_seconds,
           sets: [...we.sets].sort(byPosition).map((s) => ({
             weight: num(s.weight),
             reps: s.reps,
@@ -154,6 +168,7 @@ export function createSupabaseStore(url: string, key: string): Store {
             status: workout.status,
             exercises: workout.exercises.map((e) => ({
               exercise_id: e.exercise.id,
+              rest_seconds: e.restSeconds,
               sets: e.sets.map((s) => ({ weight: s.weight, reps: s.reps, completed: s.completed })),
             })),
           },
@@ -203,6 +218,56 @@ export function createSupabaseStore(url: string, key: string): Store {
     },
     async deleteExercise(id) {
       return check<'deleted' | 'archived'>(await supabase.rpc('delete_or_archive_exercise', { p_id: id }))
+    },
+    async listTemplates() {
+      const rows = check<{ id: string; name: string; template_exercises: { count: number }[] }[]>(
+        await supabase.from('templates').select('id, name, template_exercises(count)').order('name'),
+      )
+      return rows.map((row) => ({ id: row.id, name: row.name, exerciseCount: row.template_exercises[0]?.count ?? 0 }))
+    },
+    async getTemplate(id) {
+      const row = check<TemplateRow | null>(
+        await supabase
+          .from('templates')
+          .select(
+            `id, name, notes, template_exercises(position, rest_seconds, exercise:exercises(${EXERCISE_COLUMNS}), template_sets(position, weight, reps))`,
+          )
+          .eq('id', id)
+          .maybeSingle<TemplateRow>(),
+      )
+      if (!row) return null
+      return {
+        id: row.id,
+        name: row.name,
+        notes: row.notes ?? '',
+        exercises: [...row.template_exercises].sort(byPosition).map((te) => ({
+          exercise: toExercise(te.exercise),
+          restSeconds: te.rest_seconds,
+          sets: [...te.template_sets].sort(byPosition).map((s) => ({ weight: num(s.weight), reps: s.reps })),
+        })),
+      }
+    },
+    async saveTemplate(template) {
+      return check<string>(
+        await supabase.rpc('save_template', {
+          payload: {
+            id: template.id,
+            name: template.name,
+            notes: template.notes,
+            exercises: template.exercises.map((e) => ({
+              exercise_id: e.exercise.id,
+              rest_seconds: e.restSeconds,
+              sets: e.sets.map((s) => ({ weight: s.weight, reps: s.reps })),
+            })),
+          },
+        }),
+      )
+    },
+    async deleteTemplate(id) {
+      check(await supabase.from('templates').delete().eq('id', id))
+    },
+    async createTemplateFromWorkout(workoutId) {
+      return check<string>(await supabase.rpc('create_template_from_workout', { p_workout_id: workoutId }))
     },
     async lastPerformance(exerciseId, beforeDate) {
       const result = check<LastPerformance | null>(

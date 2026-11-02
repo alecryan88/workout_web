@@ -5,6 +5,7 @@ import { StoreProvider } from './store/context'
 import Login from './Login'
 import ExercisesScreen from './ExercisesScreen'
 import TabLayout from './TabBar'
+import TemplateEditor from './TemplateEditor'
 import TemplatesScreen from './TemplatesScreen'
 import WeekView from './WeekView'
 import WorkoutEditor from './WorkoutEditor'
@@ -32,6 +33,7 @@ export default function App({ store }: Props) {
       <HashRouter>
         <Routes>
           <Route path="/workout/:id" element={<WorkoutEditor />} />
+          <Route path="/template/:id" element={<TemplateEditor />} />
           <Route element={<TabLayout />}>
             <Route path="/templates" element={<TemplatesScreen />} />
             <Route path="/exercises" element={<ExercisesScreen />} />

@@ -42,6 +42,7 @@ export async function seedWorkout(store: Store, seed: SeedWorkout) {
   for (const [name, sets] of Object.entries(seed.exercises ?? {})) {
     exercises.push({
       exercise: await store.findOrCreateExercise(name),
+      restSeconds: 120,
       sets: sets.map((s) => ({ ...s })),
     })
   }
@@ -54,7 +55,7 @@ export const did = (reps: number | null, weight: number | null = null): SeedSet 
 /** An unticked set holding planned values. */
 export const plan = (reps: number | null, weight: number | null = null): SeedSet => ({ reps, weight, completed: false })
 
-export async function openWorkoutSheet(app: App, item: 'Edit details' | 'Copy' | 'Delete') {
+export async function openWorkoutSheet(app: App, item: 'Edit details' | 'Copy' | 'Delete' | 'Save as template') {
   await app.user.click(app.screen.getByRole('button', { name: 'Workout actions' }))
   await app.user.click(app.screen.getByRole('button', { name: item }))
 }

@@ -21,6 +21,9 @@ alter table public.sets
   drop column actual_reps,
   drop column actual_weight;
 
+alter table public.workout_exercises
+  add column rest_seconds integer not null default 120 check (rest_seconds >= 0);
+
 create or replace function public.save_workout(payload jsonb)
 returns void
 language plpgsql
@@ -50,8 +53,8 @@ begin
   delete from workout_exercises where workout_id = w_id;
 
   for ex in select value from jsonb_array_elements(coalesce(payload -> 'exercises', '[]'::jsonb)) loop
-    insert into workout_exercises (workout_id, exercise_id, position)
-    values (w_id, (ex ->> 'exercise_id')::uuid, ex_pos)
+    insert into workout_exercises (workout_id, exercise_id, position, rest_seconds)
+    values (w_id, (ex ->> 'exercise_id')::uuid, ex_pos, coalesce((ex ->> 'rest_seconds')::integer, 120))
     returning id into we_id;
 
     st_pos := 0;
@@ -96,10 +99,10 @@ begin
     returning id into new_id;
 
     for we in
-      select id, exercise_id, position from workout_exercises where workout_id = source_id order by position
+      select id, exercise_id, position, rest_seconds from workout_exercises where workout_id = source_id order by position
     loop
-      insert into workout_exercises (workout_id, exercise_id, position)
-      values (new_id, we.exercise_id, we.position)
+      insert into workout_exercises (workout_id, exercise_id, position, rest_seconds)
+      values (new_id, we.exercise_id, we.position, we.rest_seconds)
       returning id into new_we;
 
       insert into sets (workout_exercise_id, position, weight, reps, completed)
@@ -203,3 +206,132 @@ $$;
 
 revoke execute on function public.delete_or_archive_exercise(uuid) from public, anon;
 grant execute on function public.delete_or_archive_exercise(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Templates
+-- ---------------------------------------------------------------------------
+
+create table public.templates (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.template_exercises (
+  id uuid primary key default gen_random_uuid(),
+  template_id uuid not null references public.templates (id) on delete cascade,
+  exercise_id uuid not null references public.exercises (id),
+  position integer not null,
+  rest_seconds integer not null default 120 check (rest_seconds >= 0)
+);
+
+create index template_exercises_template_idx on public.template_exercises (template_id);
+create index template_exercises_exercise_idx on public.template_exercises (exercise_id);
+
+create table public.template_sets (
+  id uuid primary key default gen_random_uuid(),
+  template_exercise_id uuid not null references public.template_exercises (id) on delete cascade,
+  position integer not null,
+  weight numeric check (weight >= 0),
+  reps integer check (reps >= 0)
+);
+
+create index template_sets_template_exercise_idx on public.template_sets (template_exercise_id);
+
+alter table public.templates enable row level security;
+alter table public.template_exercises enable row level security;
+alter table public.template_sets enable row level security;
+
+create policy "authenticated full access" on public.templates for all to authenticated using (true) with check (true);
+create policy "authenticated full access" on public.template_exercises for all to authenticated using (true) with check (true);
+create policy "authenticated full access" on public.template_sets for all to authenticated using (true) with check (true);
+
+revoke all on public.templates, public.template_exercises, public.template_sets from anon;
+
+alter table public.workouts
+  add column template_id uuid references public.templates (id) on delete set null;
+
+-- Creates the template when payload.id is null, otherwise replaces it. Returns its id.
+create function public.save_template(payload jsonb)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  t_id uuid := (payload ->> 'id')::uuid;
+  ex jsonb;
+  st jsonb;
+  ex_pos integer := 0;
+  st_pos integer;
+  te_id uuid;
+begin
+  if t_id is null then
+    insert into templates (name, notes) values (payload ->> 'name', payload ->> 'notes') returning id into t_id;
+  else
+    update templates set name = payload ->> 'name', notes = payload ->> 'notes', updated_at = now() where id = t_id;
+    if not found then
+      raise exception 'Template not found';
+    end if;
+    delete from template_exercises where template_id = t_id;
+  end if;
+
+  for ex in select value from jsonb_array_elements(coalesce(payload -> 'exercises', '[]'::jsonb)) loop
+    insert into template_exercises (template_id, exercise_id, position, rest_seconds)
+    values (t_id, (ex ->> 'exercise_id')::uuid, ex_pos, coalesce((ex ->> 'rest_seconds')::integer, 120))
+    returning id into te_id;
+
+    st_pos := 0;
+    for st in select value from jsonb_array_elements(coalesce(ex -> 'sets', '[]'::jsonb)) loop
+      insert into template_sets (template_exercise_id, position, weight, reps)
+      values (te_id, st_pos, (st ->> 'weight')::numeric, (st ->> 'reps')::integer);
+      st_pos := st_pos + 1;
+    end loop;
+
+    ex_pos := ex_pos + 1;
+  end loop;
+
+  return t_id;
+end;
+$$;
+
+create function public.create_template_from_workout(p_workout_id uuid)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  t_id uuid;
+  we record;
+  new_te uuid;
+begin
+  insert into templates (name, notes)
+  select name, notes from workouts where id = p_workout_id
+  returning id into t_id;
+
+  if t_id is null then
+    raise exception 'Workout not found';
+  end if;
+
+  for we in
+    select id, exercise_id, position, rest_seconds from workout_exercises where workout_id = p_workout_id order by position
+  loop
+    insert into template_exercises (template_id, exercise_id, position, rest_seconds)
+    values (t_id, we.exercise_id, we.position, we.rest_seconds)
+    returning id into new_te;
+
+    insert into template_sets (template_exercise_id, position, weight, reps)
+    select new_te, position, weight, reps from sets where workout_exercise_id = we.id;
+  end loop;
+
+  return t_id;
+end;
+$$;
+
+revoke execute on function public.save_template(jsonb) from public, anon;
+revoke execute on function public.create_template_from_workout(uuid) from public, anon;
+grant execute on function public.save_template(jsonb) to authenticated;
+grant execute on function public.create_template_from_workout(uuid) to authenticated;

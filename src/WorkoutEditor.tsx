@@ -3,10 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { startOfWeek } from './dates'
 import { useStore } from './store/context'
 import CopyPanel from './CopyPanel'
-import ExerciseCard from './ExerciseCard'
+import ExerciseBlock from './ExerciseBlock'
 import ExercisePicker from './ExercisePicker'
+import { moveItem, removeItem, replaceItem } from './listOps'
 import Sheet from './Sheet'
-import type { Workout, WorkoutExercise } from './store/types'
+import { DEFAULT_REST_SECONDS, type PlannedSet, type Workout, type WorkoutExercise } from './store/types'
 import { useAutosave, type SaveState } from './useAutosave'
 
 const SAVE_LABELS: Record<SaveState, string> = {
@@ -33,6 +34,8 @@ function DateInput({ value, onChange }: { value: string; onChange: (value: strin
 
 type EditorSheet = 'none' | 'actions' | 'details' | 'copy' | 'delete'
 
+const unticked = (values: PlannedSet) => ({ ...values, completed: false })
+
 const weekUrl = (workout: Workout | null) => (workout ? `/?week=${startOfWeek(workout.date)}&day=${workout.date}` : '/')
 
 export default function WorkoutEditor() {
@@ -42,6 +45,7 @@ export default function WorkoutEditor() {
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [sheet, setSheet] = useState<EditorSheet>('none')
+  const [actionError, setActionError] = useState<string | null>(null)
   const autosave = useAutosave((w: Workout) => store.saveWorkout(w))
 
   useEffect(() => {
@@ -63,17 +67,15 @@ export default function WorkoutEditor() {
 
   const setExercises = (exercises: WorkoutExercise[]) => update({ exercises })
 
-  const moveExercise = (index: number, direction: -1 | 1) => {
-    if (!workout) return
-    const next = [...workout.exercises]
-    const [item] = next.splice(index, 1)
-    next.splice(index + direction, 0, item)
-    setExercises(next)
-  }
-
-  const removeExercise = (index: number) => {
-    if (!workout) return
-    setExercises(workout.exercises.filter((_, j) => j !== index))
+  const saveAsTemplate = async () => {
+    await autosave.flush()
+    try {
+      const templateId = await store.createTemplateFromWorkout(id)
+      navigate(`/template/${templateId}`)
+    } catch {
+      setSheet('none')
+      setActionError('Could not save as template. Check your connection.')
+    }
   }
 
   const toggleDone = () => {
@@ -130,21 +132,25 @@ export default function WorkoutEditor() {
 
       {workout.notes && <p className="workout-notes">{workout.notes}</p>}
 
+      {actionError && <p role="alert" className="error">{actionError}</p>}
+
       {workout.exercises.map((entry, i) => (
-        <ExerciseCard
+        <ExerciseBlock
           key={i}
           entry={entry}
-          workoutDate={workout.date}
+          previousBefore={workout.date}
+          tickable
+          makeSet={unticked}
           isFirst={i === 0}
           isLast={i === workout.exercises.length - 1}
-          onChange={(changed) => setExercises(workout.exercises.map((e, j) => (j === i ? changed : e)))}
-          onRemove={() => removeExercise(i)}
-          onMove={(direction) => moveExercise(i, direction)}
+          onChange={(changed) => setExercises(replaceItem(workout.exercises, i, changed))}
+          onRemove={() => setExercises(removeItem(workout.exercises, i))}
+          onMove={(direction) => setExercises(moveItem(workout.exercises, i, direction))}
         />
       ))}
 
       <ExercisePicker
-        onPick={(exercise) => setExercises([...workout.exercises, { exercise, sets: [] }])}
+        onPick={(exercise) => setExercises([...workout.exercises, { exercise, restSeconds: DEFAULT_REST_SECONDS, sets: [] }])}
       />
 
       <div className="bottom-bar">
@@ -159,6 +165,9 @@ export default function WorkoutEditor() {
         </button>
         <button type="button" onClick={() => setSheet('copy')}>
           Copy
+        </button>
+        <button type="button" onClick={saveAsTemplate}>
+          Save as template
         </button>
         <button type="button" className="danger" onClick={() => setSheet('delete')}>
           Delete
