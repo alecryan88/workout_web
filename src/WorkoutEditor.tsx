@@ -15,7 +15,7 @@ import {
   type Workout,
   type WorkoutExercise,
 } from './store/types'
-import { elapsed } from './time'
+import { elapsed, minutesSeconds } from './time'
 import { useNow } from './useNow'
 import { useAutosave, type SaveState } from './useAutosave'
 
@@ -41,7 +41,16 @@ function DateInput({ value, onChange }: { value: string; onChange: (value: strin
   )
 }
 
-type EditorSheet = 'none' | 'actions' | 'details' | 'copy' | 'delete' | 'finish' | 'busy'
+type EditorSheet = 'none' | 'actions' | 'details' | 'copy' | 'delete' | 'finish' | 'busy' | 'rest'
+
+/** Client-only rest countdown: lost on reload by design. */
+type Rest = { exerciseIndex: number; setIndex: number; endsAt: number }
+
+const REST_ADJUST_MS = 15_000
+
+function vibrate() {
+  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate([200, 100, 200])
+}
 
 const unticked = (values: PlannedSet) => ({ ...values, completed: false })
 
@@ -57,11 +66,33 @@ export default function WorkoutEditor() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [activeWorkout, setActiveWorkout] = useState<{ id: string; name: string } | null>(null)
   const autosave = useAutosave((w: Workout) => store.saveWorkout(w))
-  const now = useNow(workout?.status === 'in_progress')
+  const [rest, setRest] = useState<Rest | null>(null)
+  const now = useNow(workout?.status === 'in_progress' || rest !== null, rest ? 250 : 1000)
+  const restRemaining = rest ? Math.ceil((rest.endsAt - now) / 1000) : null
+
+  useEffect(() => {
+    if (restRemaining === null || restRemaining > 0) return
+    setRest(null)
+    setSheet((current) => (current === 'rest' ? 'none' : current))
+    vibrate()
+  }, [restRemaining])
+
+  const startRest = (exerciseIndex: number, setIndex: number) => {
+    if (workout?.status !== 'in_progress') return
+    setRest({ exerciseIndex, setIndex, endsAt: Date.now() + workout.exercises[exerciseIndex].restSeconds * 1000 })
+  }
+
+  const adjustRest = (deltaMs: number) => rest && setRest({ ...rest, endsAt: rest.endsAt + deltaMs })
+
+  const skipRest = () => {
+    setRest(null)
+    setSheet('none')
+  }
 
   useEffect(() => {
     setWorkout(null)
     setSheet('none')
+    setRest(null)
     store
       .getWorkout(id)
       .then((w) => {
@@ -111,7 +142,10 @@ export default function WorkoutEditor() {
   }
 
   const start = () => lifecycle(() => store.startWorkout(id), 'Could not start. Check your connection.')
-  const finish = () => lifecycle(() => store.finishWorkout(id), 'Could not finish. Check your connection.')
+  const finish = () => {
+    setRest(null)
+    return lifecycle(() => store.finishWorkout(id), 'Could not finish. Check your connection.')
+  }
   const markNotDone = () => lifecycle(() => store.setStatus(id, 'planned'), 'Could not update. Check your connection.')
 
   const untickedCount = workout ? workout.exercises.flatMap((e) => e.sets).filter((s) => !s.completed).length : 0
@@ -152,9 +186,16 @@ export default function WorkoutEditor() {
   return (
     <main className="editor">
       <header className="editor-header">
-        <button type="button" className="link-button nav-back" aria-label="Back to week" onClick={backToWeek}>
-          ‹ Week
-        </button>
+        <div className="nav-start">
+          <button type="button" className="link-button nav-back" aria-label="Back to week" onClick={backToWeek}>
+            ‹ Week
+          </button>
+          {inProgress && (
+            <button type="button" className="rest-timer" aria-label="Rest timer" disabled={!rest} onClick={() => setSheet('rest')}>
+              {restRemaining !== null ? minutesSeconds(restRemaining) : <span aria-hidden="true">⏱</span>}
+            </button>
+          )}
+        </div>
         <div className="nav-title">
           {inProgress && (
             <span className="nav-timer" role="timer" aria-label="Elapsed time">
@@ -212,8 +253,16 @@ export default function WorkoutEditor() {
           isFirst={i === 0}
           isLast={i === workout.exercises.length - 1}
           onChange={(changed) => setExercises(replaceItem(workout.exercises, i, changed))}
-          onRemove={() => setExercises(removeItem(workout.exercises, i))}
-          onMove={(direction) => setExercises(moveItem(workout.exercises, i, direction))}
+          onRemove={() => {
+            setRest(null)
+            setExercises(removeItem(workout.exercises, i))
+          }}
+          onMove={(direction) => {
+            setRest(null)
+            setExercises(moveItem(workout.exercises, i, direction))
+          }}
+          countdown={rest?.exerciseIndex === i && restRemaining !== null ? { setIndex: rest.setIndex, remainingSeconds: restRemaining } : null}
+          onSetCompleted={(setIndex) => startRest(i, setIndex)}
         />
       ))}
 
@@ -274,6 +323,21 @@ export default function WorkoutEditor() {
         </p>
         <button type="button" className="finish" onClick={finish}>
           Finish anyway
+        </button>
+      </Sheet>
+
+      <Sheet open={sheet === 'rest'} title="Rest timer" onClose={closeSheet} cancelLabel="Close">
+        <div className="stepper">
+          <button type="button" onClick={() => adjustRest(-REST_ADJUST_MS)}>
+            −15s
+          </button>
+          <span className="stepper-value">{restRemaining !== null ? minutesSeconds(restRemaining) : '—'}</span>
+          <button type="button" onClick={() => adjustRest(REST_ADJUST_MS)}>
+            +15s
+          </button>
+        </div>
+        <button type="button" onClick={skipRest}>
+          Skip
         </button>
       </Sheet>
 

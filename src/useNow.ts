@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 
 /** The current time in ms, re-rendering every `intervalMs` while `active`. */
 export function useNow(active: boolean, intervalMs = 1000): number {
-  const [now, setNow] = useState(() => Date.now())
+  const [, setTick] = useState(0)
   useEffect(() => {
     if (!active) return
-    setNow(Date.now())
-    const timer = setInterval(() => setNow(Date.now()), intervalMs)
+    const timer = setInterval(() => setTick((n) => n + 1), intervalMs)
     return () => clearInterval(timer)
   }, [active, intervalMs])
-  return active ? now : Date.now()
+  return Date.now()
 }

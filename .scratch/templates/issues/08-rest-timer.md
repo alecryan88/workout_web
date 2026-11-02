@@ -4,9 +4,14 @@
 
 **Blocked by:** 07
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Rest time stored per exercise and editable
-- [ ] Countdown starts on tick only when in progress
-- [ ] Adjust and skip work; a new tick restarts the countdown
-- [ ] Tests with fake timers cover start, adjust, skip, end
+- [x] Rest time stored per exercise and editable
+- [x] Countdown starts on tick only when in progress
+- [x] Adjust and skip work; a new tick restarts the countdown
+- [x] Tests with fake timers cover start, adjust, skip, end
+
+## Comments
+
+- Tapping a divider opens a "Rest time" sheet with −15s / +15s (0:00–10:00). It works in the template editor too, since the exercise block is shared.
+- Moving or removing an exercise, and Finish, clear a running countdown.

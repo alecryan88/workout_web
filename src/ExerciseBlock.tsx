@@ -28,7 +28,14 @@ type Props<S extends BlockSet> = {
   onChange: (entry: BlockEntry<S>) => void
   onRemove: () => void
   onMove: (direction: -1 | 1) => void
+  /** A running rest countdown in the divider below this set, if any. */
+  countdown?: { setIndex: number; remainingSeconds: number } | null
+  /** Called when a set is ticked (not when unticked). */
+  onSetCompleted?: (setIndex: number) => void
 }
+
+const REST_STEP = 15
+const MAX_REST = 600
 
 function useLastPerformance(exerciseId: string, beforeDate: string) {
   const store = useStore()
@@ -60,12 +67,15 @@ export default function ExerciseBlock<S extends BlockSet>({
   onChange,
   onRemove,
   onMove,
+  countdown = null,
+  onSetCompleted,
 }: Props<S>) {
   const name = displayName(entry.exercise)
   const weightLabel = entry.exercise.equipment === 'bodyweight' ? '+lbs' : 'lbs'
   const last = useLastPerformance(entry.exercise.id, previousBefore)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editingSets, setEditingSets] = useState(false)
+  const [restOpen, setRestOpen] = useState(false)
   const rest = minutesSeconds(entry.restSeconds)
 
   const closeMenu = () => setMenuOpen(false)
@@ -82,6 +92,15 @@ export default function ExerciseBlock<S extends BlockSet>({
   const addSet = () => {
     const previous = entry.sets[entry.sets.length - 1]
     setSets([...entry.sets, makeSet({ weight: previous?.weight ?? null, reps: previous?.reps ?? null })])
+  }
+
+  const adjustRest = (delta: number) =>
+    onChange({ ...entry, restSeconds: Math.min(MAX_REST, Math.max(0, entry.restSeconds + delta)) })
+
+  const toggle = (index: number) => {
+    const completed = !entry.sets[index].completed
+    updateSet(index, { completed } as Partial<S>)
+    if (completed) onSetCompleted?.(index)
   }
 
   const columns = ['set-row', !tickable && 'no-tick', editingSets && 'editing']
@@ -143,7 +162,7 @@ export default function ExerciseBlock<S extends BlockSet>({
                       className="tick"
                       aria-label={`Complete ${label}`}
                       aria-pressed={!!set.completed}
-                      onClick={() => updateSet(i, { completed: !set.completed } as Partial<S>)}
+                      onClick={() => toggle(i)}
                     >
                       ✓
                     </button>
@@ -154,8 +173,16 @@ export default function ExerciseBlock<S extends BlockSet>({
                     </button>
                   )}
                 </div>
-                <div className="rest-divider" aria-hidden="true">
-                  <span>{rest}</span>
+                <div className="rest-divider" data-testid={`rest after ${label}`}>
+                  {countdown?.setIndex === i ? (
+                    <span className="rest-running" role="timer" aria-label="Rest remaining">
+                      {minutesSeconds(countdown.remainingSeconds)}
+                    </span>
+                  ) : (
+                    <button type="button" aria-label={`Rest time for ${name}: ${rest}`} onClick={() => setRestOpen(true)}>
+                      {rest}
+                    </button>
+                  )}
                 </div>
               </Fragment>
             )
@@ -166,6 +193,19 @@ export default function ExerciseBlock<S extends BlockSet>({
       <button type="button" className="add-set" aria-label={`Add set to ${name}`} onClick={addSet}>
         + Add Set ({rest})
       </button>
+
+      <Sheet open={restOpen} title="Rest time" onClose={() => setRestOpen(false)} cancelLabel="Done">
+        <p className="rest-sheet-name">{name}</p>
+        <div className="stepper">
+          <button type="button" onClick={() => adjustRest(-REST_STEP)} disabled={entry.restSeconds <= 0}>
+            −15s
+          </button>
+          <span className="stepper-value">{rest}</span>
+          <button type="button" onClick={() => adjustRest(REST_STEP)} disabled={entry.restSeconds >= MAX_REST}>
+            +15s
+          </button>
+        </div>
+      </Sheet>
 
       <Sheet open={menuOpen} title={name} onClose={closeMenu}>
         <button type="button" aria-label={`Move ${name} up`} disabled={isFirst} onClick={fromMenu(() => onMove(-1))}>

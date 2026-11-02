@@ -1105,3 +1105,68 @@ button.add-exercise {
 .badge.active {
   color: var(--done);
 }
+
+.nav-start {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: start;
+}
+
+button.rest-timer {
+  min-width: 56px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: var(--well);
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+button.rest-timer:not(:disabled) {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.rest-divider button {
+  min-height: 28px;
+  padding: 0 6px;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.rest-running {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.rest-sheet-name {
+  margin: 0;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.stepper button {
+  background: var(--card);
+  font-weight: 600;
+}
+
+.stepper-value {
+  min-width: 64px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
