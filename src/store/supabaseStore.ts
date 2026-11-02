@@ -1,5 +1,43 @@
 import { createClient } from '@supabase/supabase-js'
-import { summaryCounts, type Exercise, type LastPerformance, type Store, type Workout, type WorkoutStatus, type WorkoutSummary } from './types'
+import {
+  DuplicateExerciseError,
+  summaryCounts,
+  type Equipment,
+  type Exercise,
+  type ExerciseInput,
+  type MuscleGroup,
+  type LastPerformance, type Store, type Workout, type WorkoutStatus, type WorkoutSummary } from './types'
+
+type ExerciseRow = {
+  id: string
+  name: string
+  equipment: Equipment
+  muscle_group: MuscleGroup | null
+  notes: string | null
+}
+
+const EXERCISE_COLUMNS = 'id, name, equipment, muscle_group, notes'
+
+const toExercise = (row: ExerciseRow): Exercise => ({
+  id: row.id,
+  name: row.name,
+  equipment: row.equipment,
+  muscleGroup: row.muscle_group,
+  notes: row.notes ?? '',
+})
+
+const toExerciseRow = (input: ExerciseInput) => ({
+  name: input.name.trim(),
+  equipment: input.equipment,
+  muscle_group: input.muscleGroup,
+  notes: input.notes || null,
+})
+
+/** Maps a unique-violation on (lower(name), equipment) to DuplicateExerciseError. */
+function checkUnique<T>(result: { data: T | null; error: { code?: string } | null }): T {
+  if (result.error?.code === '23505') throw new DuplicateExerciseError()
+  return check(result)
+}
 
 type SetRow = {
   position: number
@@ -16,7 +54,7 @@ type WorkoutRow = {
   status: WorkoutStatus
   workout_exercises: {
     position: number
-    exercise: Exercise
+    exercise: ExerciseRow
     sets: SetRow[]
   }[]
 }
@@ -79,7 +117,7 @@ export function createSupabaseStore(url: string, key: string): Store {
         await supabase
           .from('workouts')
           .select(
-            'id, date, name, notes, status, workout_exercises(position, exercise:exercises(id, name), sets(position, weight, reps, completed))',
+            `id, date, name, notes, status, workout_exercises(position, exercise:exercises(${EXERCISE_COLUMNS}), sets(position, weight, reps, completed))`,
           )
           .eq('id', id)
           .maybeSingle<WorkoutRow>(),
@@ -92,7 +130,7 @@ export function createSupabaseStore(url: string, key: string): Store {
         notes: row.notes ?? '',
         status: row.status,
         exercises: [...row.workout_exercises].sort(byPosition).map((we) => ({
-          exercise: we.exercise,
+          exercise: toExercise(we.exercise),
           sets: [...we.sets].sort(byPosition).map((s) => ({
             weight: num(s.weight),
             reps: s.reps,
@@ -134,13 +172,37 @@ export function createSupabaseStore(url: string, key: string): Store {
     async searchExercises(prefix) {
       const needle = prefix.trim()
       if (!needle) return []
-      return check<Exercise[]>(
-        await supabase.from('exercises').select('id, name').ilike('name', `${escapeLike(needle)}%`).order('name').limit(8),
+      const rows = check<ExerciseRow[]>(
+        await supabase
+          .from('exercises')
+          .select(EXERCISE_COLUMNS)
+          .is('archived_at', null)
+          .ilike('name', `${escapeLike(needle)}%`)
+          .order('name')
+          .order('equipment')
+          .limit(8),
       )
+      return rows.map(toExercise)
     },
     async findOrCreateExercise(name) {
-      const row = check<Exercise>(await supabase.rpc('find_or_create_exercise', { p_name: name }).single<Exercise>())
-      return { id: row.id, name: row.name }
+      return toExercise(check(await supabase.rpc('find_or_create_exercise', { p_name: name }).single<ExerciseRow>()))
+    },
+    async listExercises() {
+      const rows = check<ExerciseRow[]>(
+        await supabase.from('exercises').select(EXERCISE_COLUMNS).is('archived_at', null).order('name').order('equipment'),
+      )
+      return rows.map(toExercise)
+    },
+    async createExercise(input) {
+      return toExercise(
+        checkUnique(await supabase.from('exercises').insert(toExerciseRow(input)).select(EXERCISE_COLUMNS).single<ExerciseRow>()),
+      )
+    },
+    async updateExercise(exercise) {
+      checkUnique(await supabase.from('exercises').update(toExerciseRow(exercise)).eq('id', exercise.id))
+    },
+    async deleteExercise(id) {
+      return check<'deleted' | 'archived'>(await supabase.rpc('delete_or_archive_exercise', { p_id: id }))
     },
     async lastPerformance(exerciseId, beforeDate) {
       const result = check<LastPerformance | null>(

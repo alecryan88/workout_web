@@ -1,5 +1,5 @@
 import { copyExercises } from './copy'
-import { summaryCounts, type Exercise, type Store, type Workout } from './types'
+import { DuplicateExerciseError, summaryCounts, type Exercise, type ExerciseInput, type Store, type Workout } from './types'
 
 type Options = {
   email: string
@@ -11,9 +11,24 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
   let session = signedIn
   let nextId = 1
   const workouts = new Map<string, Workout>()
-  const exercises: Exercise[] = []
+  const exercises: (Exercise & { archived: boolean })[] = []
 
   const id = () => String(nextId++)
+
+  const active = () => exercises.filter((e) => !e.archived)
+  const byNameThenEquipment = (a: Exercise, b: Exercise) => a.name.localeCompare(b.name) || a.equipment.localeCompare(b.equipment)
+  const publicExercise = ({ archived: _, ...exercise }: Exercise & { archived: boolean }): Exercise => ({ ...exercise })
+  const sameKey = (a: Pick<Exercise, 'name' | 'equipment'>, b: Pick<Exercise, 'name' | 'equipment'>) =>
+    a.name.trim().toLowerCase() === b.name.trim().toLowerCase() && a.equipment === b.equipment
+  const assertUnique = (candidate: Pick<Exercise, 'name' | 'equipment'>, exceptId?: string) => {
+    if (exercises.some((e) => e.id !== exceptId && sameKey(e, candidate))) throw new DuplicateExerciseError()
+  }
+  const isUsed = (exerciseId: string) =>
+    [...workouts.values()].some((w) => w.exercises.some((e) => e.exercise.id === exerciseId))
+  const current = (exercise: Exercise): Exercise => {
+    const record = exercises.find((e) => e.id === exercise.id)
+    return record ? publicExercise(record) : exercise
+  }
 
   return {
     async hasSession() {
@@ -33,7 +48,9 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
     },
     async getWorkout(workoutId) {
       const workout = workouts.get(workoutId)
-      return workout ? structuredClone(workout) : null
+      if (!workout) return null
+      const copy = structuredClone(workout)
+      return { ...copy, exercises: copy.exercises.map((e) => ({ ...e, exercise: current(e.exercise) })) }
     },
     async createWorkout(date, name) {
       const workout: Workout = { id: id(), date, name, notes: '', status: 'planned', exercises: [] }
@@ -68,18 +85,46 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
     async searchExercises(prefix) {
       const needle = prefix.trim().toLowerCase()
       if (!needle) return []
-      return exercises
+      return active()
         .filter((e) => e.name.toLowerCase().startsWith(needle))
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((e) => ({ ...e }))
+        .sort(byNameThenEquipment)
+        .map(publicExercise)
     },
     async findOrCreateExercise(name) {
-      const trimmed = name.trim()
-      const existing = exercises.find((e) => e.name.toLowerCase() === trimmed.toLowerCase())
-      if (existing) return { ...existing }
-      const exercise = { id: id(), name: trimmed }
+      const key = { name: name.trim(), equipment: 'other' as const }
+      const existing = exercises.find((e) => sameKey(e, key))
+      if (existing) {
+        existing.archived = false
+        return publicExercise(existing)
+      }
+      const exercise = { id: id(), ...key, muscleGroup: null, notes: '', archived: false }
       exercises.push(exercise)
-      return { ...exercise }
+      return publicExercise(exercise)
+    },
+    async listExercises() {
+      return active().sort(byNameThenEquipment).map(publicExercise)
+    },
+    async createExercise(input: ExerciseInput) {
+      assertUnique(input)
+      const exercise = { ...input, name: input.name.trim(), id: id(), archived: false }
+      exercises.push(exercise)
+      return publicExercise(exercise)
+    },
+    async updateExercise(exercise) {
+      assertUnique(exercise, exercise.id)
+      const record = exercises.find((e) => e.id === exercise.id)
+      if (!record) throw new Error('Exercise not found')
+      Object.assign(record, { ...exercise, name: exercise.name.trim() })
+    },
+    async deleteExercise(exerciseId) {
+      const index = exercises.findIndex((e) => e.id === exerciseId)
+      if (index === -1) throw new Error('Exercise not found')
+      if (isUsed(exerciseId)) {
+        exercises[index].archived = true
+        return 'archived'
+      }
+      exercises.splice(index, 1)
+      return 'deleted'
     },
     async lastPerformance(exerciseId, beforeDate) {
       const candidates = [...workouts.values()]

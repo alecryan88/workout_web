@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
 import { useStore } from './store/context'
-import type { Exercise } from './store/types'
+import { displayName, type Exercise } from './store/types'
 
 type Props = { onPick: (exercise: Exercise) => void }
 
@@ -39,7 +39,9 @@ export default function ExercisePicker({ onPick }: Props) {
     event.preventDefault()
     if (!text.trim()) return
     try {
-      pick(await store.findOrCreateExercise(text))
+      const typed = text.trim().toLowerCase()
+      const matches = (await store.searchExercises(text)).filter((e) => e.name.toLowerCase() === typed)
+      pick(matches.length === 1 ? matches[0] : await store.findOrCreateExercise(text))
     } catch {
       setError('Could not add exercise. Check your connection.')
     }
@@ -79,7 +81,7 @@ export default function ExercisePicker({ onPick }: Props) {
         <ul role="listbox" id={listId} className="suggestions">
           {suggestions.map((s) => (
             <li key={s.id} role="option" aria-selected={false} onClick={() => pick(s)}>
-              {s.name}
+              {displayName(s)}
             </li>
           ))}
         </ul>

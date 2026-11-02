@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import NumberInput from './NumberInput'
 import Sheet from './Sheet'
 import { useStore } from './store/context'
-import type { LastPerformance, PerformedSet, SetEntry, WorkoutExercise } from './store/types'
+import { displayName, type LastPerformance, type PerformedSet, type SetEntry, type WorkoutExercise } from './store/types'
 import { formatPrevious } from './previous'
 
 type Props = {
@@ -37,7 +37,8 @@ const hasValue = (set: PerformedSet | null | undefined): set is PerformedSet =>
   !!set && (set.weight !== null || set.reps !== null)
 
 export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, onChange, onRemove, onMove }: Props) {
-  const name = entry.exercise.name
+  const name = displayName(entry.exercise)
+  const weightLabel = entry.exercise.equipment === 'bodyweight' ? '+lbs' : 'lbs'
   const last = useLastPerformance(entry.exercise.id, workoutDate)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editingSets, setEditingSets] = useState(false)
@@ -82,7 +83,7 @@ export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, onCh
           <div className={`set-row set-head${editingSets ? ' editing' : ''}`} aria-hidden="true">
             <span>Set</span>
             <span>Previous</span>
-            <span>lbs</span>
+            <span>{weightLabel}</span>
             <span>Reps</span>
             <span>✓</span>
             {editingSets && <span />}

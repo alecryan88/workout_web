@@ -6,9 +6,32 @@ export type SetEntry = {
   completed: boolean
 }
 
+export const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other'] as const
+export type Equipment = (typeof EQUIPMENT)[number]
+
+export const MUSCLE_GROUPS = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'full body'] as const
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number]
+
 export type Exercise = {
   id: string
   name: string
+  equipment: Equipment
+  muscleGroup: MuscleGroup | null
+  notes: string
+}
+
+export type ExerciseInput = Omit<Exercise, 'id'>
+
+export const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+
+/** "Name (Equipment)", leaving out the equipment when it is "other". */
+export const displayName = ({ name, equipment }: Pick<Exercise, 'name' | 'equipment'>) =>
+  equipment === 'other' ? name : `${name} (${capitalise(equipment)})`
+
+export class DuplicateExerciseError extends Error {
+  constructor() {
+    super('An exercise with that name and equipment already exists.')
+  }
 }
 
 export type WorkoutExercise = {
@@ -70,7 +93,17 @@ export interface Store {
   deleteWorkout(id: string): Promise<void>
   setStatus(id: string, status: WorkoutStatus): Promise<void>
   copyWorkout(id: string, dates: string[], options: CopyOptions): Promise<void>
+  /** Active exercises whose name starts with the prefix, ordered by name then equipment. */
   searchExercises(prefix: string): Promise<Exercise[]>
+  /** Inline creation from the picker: finds or creates the exercise with this name and equipment "other". */
   findOrCreateExercise(name: string): Promise<Exercise>
+  /** Active (not archived) exercises, ordered by name then equipment. */
+  listExercises(): Promise<Exercise[]>
+  /** Throws DuplicateExerciseError when name + equipment is taken. */
+  createExercise(input: ExerciseInput): Promise<Exercise>
+  /** Throws DuplicateExerciseError when name + equipment is taken. */
+  updateExercise(exercise: Exercise): Promise<void>
+  /** Removes an unused exercise, or archives one used by a workout or template. */
+  deleteExercise(id: string): Promise<'deleted' | 'archived'>
   lastPerformance(exerciseId: string, beforeDate: string): Promise<LastPerformance | null>
 }

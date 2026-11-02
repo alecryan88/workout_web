@@ -151,3 +151,55 @@ $$;
 
 revoke execute on function public.copy_workout(uuid, date[], boolean) from public, anon;
 grant execute on function public.copy_workout(uuid, date[], boolean) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Exercise library: equipment, muscle group, notes, archiving
+-- ---------------------------------------------------------------------------
+
+alter table public.exercises
+  add column equipment text not null default 'other'
+    check (equipment in ('barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other')),
+  add column muscle_group text
+    check (muscle_group in ('chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'full body')),
+  add column notes text,
+  add column archived_at timestamptz;
+
+drop index public.exercises_name_lower_key;
+create unique index exercises_name_equipment_key on public.exercises (lower(name), equipment);
+
+-- Inline creation from the picker: equipment "other". An archived match is restored.
+create or replace function public.find_or_create_exercise(p_name text)
+returns public.exercises
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  result exercises;
+begin
+  insert into exercises (name, equipment) values (trim(p_name), 'other')
+  on conflict ((lower(name)), equipment) do update set archived_at = null
+  returning * into result;
+  return result;
+end;
+$$;
+
+create function public.delete_or_archive_exercise(p_id uuid)
+returns text
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if exists (select 1 from workout_exercises where exercise_id = p_id)
+     or exists (select 1 from template_exercises where exercise_id = p_id) then
+    update exercises set archived_at = now() where id = p_id;
+    return 'archived';
+  end if;
+  delete from exercises where id = p_id;
+  return 'deleted';
+end;
+$$;
+
+revoke execute on function public.delete_or_archive_exercise(uuid) from public, anon;
+grant execute on function public.delete_or_archive_exercise(uuid) to authenticated;

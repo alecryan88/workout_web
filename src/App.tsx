@@ -3,6 +3,9 @@ import { HashRouter, Route, Routes } from 'react-router-dom'
 import type { Store } from './store/types'
 import { StoreProvider } from './store/context'
 import Login from './Login'
+import ExercisesScreen from './ExercisesScreen'
+import TabLayout from './TabBar'
+import TemplatesScreen from './TemplatesScreen'
 import WeekView from './WeekView'
 import WorkoutEditor from './WorkoutEditor'
 
@@ -29,7 +32,11 @@ export default function App({ store }: Props) {
       <HashRouter>
         <Routes>
           <Route path="/workout/:id" element={<WorkoutEditor />} />
-          <Route path="*" element={<WeekView onSignOut={signOut} />} />
+          <Route element={<TabLayout />}>
+            <Route path="/templates" element={<TemplatesScreen />} />
+            <Route path="/exercises" element={<ExercisesScreen />} />
+            <Route path="*" element={<WeekView onSignOut={signOut} />} />
+          </Route>
         </Routes>
       </HashRouter>
     </StoreProvider>

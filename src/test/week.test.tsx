@@ -8,6 +8,11 @@ afterEach(() => {
 
 type Screen = App['screen']
 
+const dayLinks = (screen: Screen) =>
+  within(screen.getByRole('region', { name: /workouts$/ }))
+    .getAllByRole('link')
+    .map((l) => l.textContent)
+
 function stripDays(screen: Screen) {
   return screen.getAllByRole('button', { name: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) / })
 }
@@ -46,7 +51,7 @@ describe('week view', () => {
     await user.click(screen.getByRole('button', { name: 'Tue Nov 3' }))
     expect(screen.getByRole('heading', { name: "Tuesday's workouts" })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tue Nov 3' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getAllByRole('link').map((l) => l.textContent)).toEqual([
+    expect(dayLinks(screen)).toEqual([
       expect.stringContaining('Push Day'),
       expect.stringContaining('Evening Run'),
     ])
@@ -54,7 +59,7 @@ describe('week view', () => {
 
     await user.click(screen.getByRole('button', { name: 'Fri Nov 6' }))
     expect(screen.getByRole('heading', { name: "Friday's workouts" })).toBeInTheDocument()
-    expect(screen.getAllByRole('link').map((l) => l.textContent)).toEqual([expect.stringContaining('Pull Day')])
+    expect(dayLinks(screen)).toEqual([expect.stringContaining('Pull Day')])
   })
   it('moves between weeks with the arrows, selecting Monday, and jumps back to today', async () => {
     setToday('2026-11-04')
