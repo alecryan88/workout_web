@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import NumberInput from './NumberInput'
 import Sheet from './Sheet'
 import { useStore } from './store/context'
-import type { SetEntry, WorkoutExercise } from './store/types'
-import { summarisePerformance } from './summary'
+import type { LastPerformance, PerformedSet, SetEntry, WorkoutExercise } from './store/types'
+import { formatPrevious } from './previous'
 
 type Props = {
   entry: WorkoutExercise
@@ -19,23 +19,26 @@ const emptySet: SetEntry = { weight: null, reps: null, completed: false }
 
 function useLastPerformance(exerciseId: string, beforeDate: string) {
   const store = useStore()
-  const [line, setLine] = useState<string | null>(null)
+  const [last, setLast] = useState<LastPerformance | null>(null)
   useEffect(() => {
     let cancelled = false
     store
       .lastPerformance(exerciseId, beforeDate)
-      .then((last) => !cancelled && setLine(last ? summarisePerformance(last) : null))
-      .catch(() => !cancelled && setLine(null))
+      .then((result) => !cancelled && setLast(result))
+      .catch(() => !cancelled && setLast(null))
     return () => {
       cancelled = true
     }
   }, [store, exerciseId, beforeDate])
-  return line
+  return last
 }
+
+const hasValue = (set: PerformedSet | null | undefined): set is PerformedSet =>
+  !!set && (set.weight !== null || set.reps !== null)
 
 export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, onChange, onRemove, onMove }: Props) {
   const name = entry.exercise.name
-  const lastLine = useLastPerformance(entry.exercise.id, workoutDate)
+  const last = useLastPerformance(entry.exercise.id, workoutDate)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editingSets, setEditingSets] = useState(false)
 
@@ -73,12 +76,12 @@ export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, onCh
           )}
         </div>
       </div>
-      {lastLine && <p className="last">{lastLine}</p>}
 
       {entry.sets.length > 0 && (
         <div className="sets">
           <div className={`set-row set-head${editingSets ? ' editing' : ''}`} aria-hidden="true">
             <span>Set</span>
+            <span>Previous</span>
             <span>lbs</span>
             <span>Reps</span>
             <span>✓</span>
@@ -86,9 +89,25 @@ export default function ExerciseCard({ entry, workoutDate, isFirst, isLast, onCh
           </div>
           {entry.sets.map((set, i) => {
             const label = `${name} set ${i + 1}`
+            const prev = last?.sets[i]
             return (
               <div role="group" aria-label={label} className={rowClass(set)} key={i}>
                 <span className="set-number">{i + 1}</span>
+                {hasValue(prev) ? (
+                  <button
+                    type="button"
+                    className="previous"
+                    data-testid={`previous ${label}`}
+                    aria-label={`Use previous for ${label}`}
+                    onClick={() => updateSet(i, { weight: prev.weight, reps: prev.reps })}
+                  >
+                    {formatPrevious(prev)}
+                  </button>
+                ) : (
+                  <span className="previous" data-testid={`previous ${label}`}>
+                    —
+                  </span>
+                )}
                 <NumberInput label={`${label} lbs`} decimal value={set.weight} onChange={(v) => updateSet(i, { weight: v })} />
                 <NumberInput label={`${label} reps`} value={set.reps} onChange={(v) => updateSet(i, { reps: v })} />
                 <button

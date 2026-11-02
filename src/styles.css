@@ -607,12 +607,6 @@ button.add-exercise {
   font-weight: 600;
 }
 
-.last {
-  margin: 0 0 8px;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
 .sets {
   display: grid;
   gap: 6px;
@@ -621,7 +615,7 @@ button.add-exercise {
 
 .set-row {
   display: grid;
-  grid-template-columns: 40px 1fr 1fr 48px;
+  grid-template-columns: 40px minmax(0, 1.4fr) 1fr 1fr 48px;
   align-items: center;
   gap: 8px;
   padding: 3px 0;
@@ -629,7 +623,20 @@ button.add-exercise {
 }
 
 .set-row.editing {
-  grid-template-columns: 40px 1fr 1fr 48px 32px;
+  grid-template-columns: 40px minmax(0, 1.4fr) 1fr 1fr 48px 32px;
+}
+
+.previous {
+  min-height: 40px;
+  padding: 0 2px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .set-row.completed {

@@ -111,6 +111,8 @@ begin
 end;
 $$;
 
+-- Returns the latest done workout's sets for the exercise in set order; sets that
+-- weren't completed come back as null so Previous can match by set number.
 create or replace function public.last_performance(p_exercise_id uuid, before_date date)
 returns jsonb
 language sql
@@ -135,10 +137,13 @@ as $$
   select jsonb_build_object(
     'date', l.date,
     'sets', (
-      select jsonb_agg(jsonb_build_object('reps', s.reps, 'weight', s.weight) order by we.position, s.position)
+      select jsonb_agg(
+        case when s.completed then jsonb_build_object('reps', s.reps, 'weight', s.weight) else 'null'::jsonb end
+        order by we.position, s.position
+      )
       from workout_exercises we
       join sets s on s.workout_exercise_id = we.id
-      where we.workout_id = l.id and we.exercise_id = p_exercise_id and s.completed
+      where we.workout_id = l.id and we.exercise_id = p_exercise_id
     )
   )
   from latest l;

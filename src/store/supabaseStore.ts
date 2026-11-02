@@ -147,7 +147,7 @@ export function createSupabaseStore(url: string, key: string): Store {
         await supabase.rpc('last_performance', { p_exercise_id: exerciseId, before_date: beforeDate }),
       )
       if (!result) return null
-      return { date: result.date, sets: result.sets.map((s) => ({ reps: s.reps, weight: num(s.weight) })) }
+      return { date: result.date, sets: result.sets.map((s) => (s ? { reps: s.reps, weight: num(s.weight) } : null)) }
     },
   }
 }

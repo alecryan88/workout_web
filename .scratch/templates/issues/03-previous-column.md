@@ -4,10 +4,10 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Previous matches by set number from the right workout
-- [ ] Unticked sets and non-done workouts are ignored
-- [ ] "—" shown for missing sets
-- [ ] Tap fills lbs and reps
-- [ ] Tests cover these rules
+- [x] Previous matches by set number from the right workout
+- [x] Unticked sets and non-done workouts are ignored
+- [x] "—" shown for missing sets
+- [x] Tap fills lbs and reps
+- [x] Tests cover these rules

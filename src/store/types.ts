@@ -48,9 +48,10 @@ export type PerformedSet = {
   weight: number | null
 }
 
+/** Previous values for one exercise: `sets[i]` is set number i + 1, or null when that set wasn't completed. */
 export type LastPerformance = {
   date: string
-  sets: PerformedSet[]
+  sets: (PerformedSet | null)[]
 }
 
 export type CopyOptions = {

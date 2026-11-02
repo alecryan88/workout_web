@@ -86,12 +86,10 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
         .filter((w) => w.status === 'done' && w.date < beforeDate)
         .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
       for (const workout of candidates) {
-        const sets = workout.exercises
-          .filter((e) => e.exercise.id === exerciseId)
-          .flatMap((e) => e.sets)
-          .filter((s) => s.completed)
-          .map((s) => ({ reps: s.reps, weight: s.weight }))
-        if (sets.length > 0) return { date: workout.date, sets }
+        const sets = workout.exercises.filter((e) => e.exercise.id === exerciseId).flatMap((e) => e.sets)
+        if (sets.some((s) => s.completed)) {
+          return { date: workout.date, sets: sets.map((s) => (s.completed ? { reps: s.reps, weight: s.weight } : null)) }
+        }
       }
       return null
     },
