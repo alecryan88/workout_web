@@ -1,12 +1,13 @@
 import { dayLabel, dayNumber, shortWeekday } from './dates'
 import { isMissed, type WorkoutSummary } from './store/types'
 
-type DotState = 'done' | 'missed' | 'planned'
+type DotState = 'active' | 'done' | 'missed' | 'planned'
 
-const dotText: Record<DotState, string> = { done: 'All done', missed: 'Missed', planned: 'Planned' }
+const dotText: Record<DotState, string> = { active: 'In progress', done: 'All done', missed: 'Missed', planned: 'Planned' }
 
 function dotState(dayWorkouts: WorkoutSummary[], today: string): DotState | null {
   if (dayWorkouts.length === 0) return null
+  if (dayWorkouts.some((w) => w.status === 'in_progress')) return 'active'
   if (dayWorkouts.every((w) => w.status === 'done')) return 'done'
   if (dayWorkouts.some((w) => isMissed(w, today))) return 'missed'
   return 'planned'

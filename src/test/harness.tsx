@@ -46,7 +46,8 @@ export async function seedWorkout(store: Store, seed: SeedWorkout) {
       sets: sets.map((s) => ({ ...s })),
     })
   }
-  await store.saveWorkout({ ...workout, notes: seed.notes ?? '', status: seed.status ?? 'planned', exercises })
+  await store.saveWorkout({ ...workout, notes: seed.notes ?? '', exercises })
+  if (seed.status === 'done') await store.setStatus(id, 'done')
   return id
 }
 
@@ -55,7 +56,7 @@ export const did = (reps: number | null, weight: number | null = null): SeedSet 
 /** An unticked set holding planned values. */
 export const plan = (reps: number | null, weight: number | null = null): SeedSet => ({ reps, weight, completed: false })
 
-export async function openWorkoutSheet(app: App, item: 'Edit details' | 'Copy' | 'Delete' | 'Save as template') {
+export async function openWorkoutSheet(app: App, item: 'Edit details' | 'Copy' | 'Delete' | 'Save as template' | 'Mark not done') {
   await app.user.click(app.screen.getByRole('button', { name: 'Workout actions' }))
   await app.user.click(app.screen.getByRole('button', { name: item }))
 }

@@ -24,6 +24,8 @@ alter table public.sets
 alter table public.workout_exercises
   add column rest_seconds integer not null default 120 check (rest_seconds >= 0);
 
+-- Saves name, date, notes and exercises. Status and times change only through
+-- start_workout, finish_workout and direct status updates.
 create or replace function public.save_workout(payload jsonb)
 returns void
 language plpgsql
@@ -42,7 +44,6 @@ begin
   set date = (payload ->> 'date')::date,
       name = payload ->> 'name',
       notes = payload ->> 'notes',
-      status = payload ->> 'status',
       updated_at = now()
   where id = w_id;
 
@@ -378,3 +379,49 @@ $$;
 
 revoke execute on function public.schedule_template(uuid, date[]) from public, anon;
 grant execute on function public.schedule_template(uuid, date[]) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Active workouts: Start / in progress / Finish
+-- ---------------------------------------------------------------------------
+
+alter table public.workouts drop constraint workouts_status_check;
+alter table public.workouts
+  add constraint workouts_status_check check (status in ('planned', 'in_progress', 'done')),
+  add column started_at timestamptz,
+  add column finished_at timestamptz;
+
+-- At most one workout in progress.
+create unique index workouts_one_in_progress on public.workouts ((true)) where status = 'in_progress';
+
+create function public.start_workout(p_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  update workouts
+  set status = 'in_progress', started_at = now(), finished_at = null, updated_at = now()
+  where id = p_id and status = 'planned';
+end;
+$$;
+
+-- Duration is finished_at - started_at; a workout finished without Start has no started_at.
+create function public.finish_workout(p_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  update workouts set status = 'done', finished_at = now(), updated_at = now() where id = p_id;
+  if not found then
+    raise exception 'Workout not found';
+  end if;
+end;
+$$;
+
+revoke execute on function public.start_workout(uuid) from public, anon;
+revoke execute on function public.finish_workout(uuid) from public, anon;
+grant execute on function public.start_workout(uuid) to authenticated;
+grant execute on function public.finish_workout(uuid) to authenticated;

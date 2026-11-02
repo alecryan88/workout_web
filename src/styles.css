@@ -1069,3 +1069,39 @@ button.add-exercise {
   text-align: center;
   font-weight: 600;
 }
+
+.editor-header .finish {
+  justify-self: end;
+  min-width: 88px;
+}
+
+.nav-timer {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.meta-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.strip-dot.active {
+  background: var(--done);
+  box-shadow: 0 0 0 2px var(--done-tint);
+}
+
+.workout-chip.in_progress {
+  border-left-color: var(--done);
+  background: var(--done-tint);
+}
+
+.badge.active {
+  color: var(--done);
+}

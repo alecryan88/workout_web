@@ -4,11 +4,17 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Start/Finish lifecycle in both stores, with the single in-progress rule enforced
-- [ ] Elapsed timer correct after time passes (fake timers) and after reload
-- [ ] Unticked-sets confirmation
-- [ ] Duration shown on done workouts; Mark not done works
-- [ ] Week card and dot for in-progress
-- [ ] Tests cover the above
+- [x] Start/Finish lifecycle in both stores, with the single in-progress rule enforced
+- [x] Elapsed timer correct after time passes (fake timers) and after reload
+- [x] Unticked-sets confirmation
+- [x] Duration shown on done workouts; Mark not done works
+- [x] Week card and dot for in-progress
+- [x] Tests cover the above
+
+## Comments
+
+- `saveWorkout` (and the `save_workout` RPC) no longer writes status; status and times change only through `startWorkout`, `finishWorkout` and `setStatus`, so a late autosave can't undo Start or Finish.
+- "Mark not done" returns the workout to planned and clears its start and finish times (it doesn't resume the timer).
+- Finish is in the top bar for planned and in-progress workouts; Start sits in the bottom bar for planned ones. The "Mark done" button is gone.

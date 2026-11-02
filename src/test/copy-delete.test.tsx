@@ -70,7 +70,7 @@ describe('copying a workout', () => {
     for (const name of ['Bench Press set 1', 'Bench Press set 2', 'Bench Press set 3', 'Dips set 1']) {
       expect(screen.getByRole('button', { name: `Complete ${name}` })).toHaveAttribute('aria-pressed', 'false')
     }
-    expect(screen.getByRole('button', { name: 'Mark done' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument()
 
     await app.user.click(screen.getByRole('button', { name: 'Back to week' }))
     await app.user.click(await screen.findByRole('button', { name: 'Previous week' }))

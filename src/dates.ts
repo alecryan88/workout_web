@@ -54,3 +54,8 @@ export function longWeekday(iso: string): string {
 export function dayNumber(iso: string): number {
   return fromIso(iso).getDate()
 }
+
+/** "Nov 4, 2026" */
+export function fullDate(iso: string): string {
+  return `${monthDay(iso)}, ${fromIso(iso).getFullYear()}`
+}

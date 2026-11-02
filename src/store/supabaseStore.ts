@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import {
   DuplicateExerciseError,
+  WorkoutInProgressError,
   summaryCounts,
   type Equipment,
   type Exercise,
@@ -52,6 +53,8 @@ type WorkoutRow = {
   name: string
   notes: string | null
   status: WorkoutStatus
+  started_at: string | null
+  finished_at: string | null
   template_id: string | null
   workout_exercises: {
     position: number
@@ -131,7 +134,7 @@ export function createSupabaseStore(url: string, key: string): Store {
         await supabase
           .from('workouts')
           .select(
-            `id, date, name, notes, status, template_id, workout_exercises(position, rest_seconds, exercise:exercises(${EXERCISE_COLUMNS}), sets(position, weight, reps, completed))`,
+            `id, date, name, notes, status, started_at, finished_at, template_id, workout_exercises(position, rest_seconds, exercise:exercises(${EXERCISE_COLUMNS}), sets(position, weight, reps, completed))`,
           )
           .eq('id', id)
           .maybeSingle<WorkoutRow>(),
@@ -143,6 +146,8 @@ export function createSupabaseStore(url: string, key: string): Store {
         name: row.name,
         notes: row.notes ?? '',
         status: row.status,
+        startedAt: row.started_at,
+        finishedAt: row.finished_at,
         templateId: row.template_id,
         exercises: [...row.workout_exercises].sort(byPosition).map((we) => ({
           exercise: toExercise(we.exercise),
@@ -167,7 +172,6 @@ export function createSupabaseStore(url: string, key: string): Store {
             date: workout.date,
             name: workout.name,
             notes: workout.notes,
-            status: workout.status,
             exercises: workout.exercises.map((e) => ({
               exercise_id: e.exercise.id,
               rest_seconds: e.restSeconds,
@@ -181,7 +185,26 @@ export function createSupabaseStore(url: string, key: string): Store {
       check(await supabase.from('workouts').delete().eq('id', id))
     },
     async setStatus(id, status) {
-      check(await supabase.from('workouts').update({ status, updated_at: new Date().toISOString() }).eq('id', id))
+      const times = status === 'planned' ? { started_at: null, finished_at: null } : {}
+      check(await supabase.from('workouts').update({ status, ...times, updated_at: new Date().toISOString() }).eq('id', id))
+    },
+    async startWorkout(id) {
+      const active = await this.getInProgressWorkout()
+      if (active && active.id !== id) throw new WorkoutInProgressError(active)
+      const { error } = await supabase.rpc('start_workout', { p_id: id })
+      if (error?.code === '23505') {
+        const current = await this.getInProgressWorkout()
+        if (current) throw new WorkoutInProgressError(current)
+      }
+      if (error) throw error
+    },
+    async finishWorkout(id) {
+      check(await supabase.rpc('finish_workout', { p_id: id }))
+    },
+    async getInProgressWorkout() {
+      return check<{ id: string; name: string } | null>(
+        await supabase.from('workouts').select('id, name').eq('status', 'in_progress').maybeSingle<{ id: string; name: string }>(),
+      )
     },
     async copyWorkout(id, dates, { tickedOnly }) {
       check(await supabase.rpc('copy_workout', { source_id: id, dates, ticked_only: tickedOnly }))

@@ -1,4 +1,4 @@
-export type WorkoutStatus = 'planned' | 'done'
+export type WorkoutStatus = 'planned' | 'in_progress' | 'done'
 
 /** A planned lbs × reps pair, as held by a template. */
 export type PlannedSet = {
@@ -72,6 +72,10 @@ export type Workout = {
   name: string
   notes: string
   status: WorkoutStatus
+  /** When Start was pressed (ISO timestamp), or null. */
+  startedAt: string | null
+  /** When Finish was pressed (ISO timestamp), or null. */
+  finishedAt: string | null
   /** The template this workout was scheduled from, for reference only (no live sync). */
   templateId: string | null
   exercises: WorkoutExercise[]
@@ -89,6 +93,18 @@ export function summaryCounts(exercises: { sets: Pick<SetEntry, 'completed'>[] }
     exerciseCount: exercises.length,
     setCount: sets.length,
     completedSetCount: sets.filter((s) => s.completed).length,
+  }
+}
+
+/** Seconds between Start and Finish, or null when the workout wasn't timed. */
+export function durationSeconds({ startedAt, finishedAt }: Pick<Workout, 'startedAt' | 'finishedAt'>): number | null {
+  if (!startedAt || !finishedAt) return null
+  return (Date.parse(finishedAt) - Date.parse(startedAt)) / 1000
+}
+
+export class WorkoutInProgressError extends Error {
+  constructor(readonly active: { id: string; name: string }) {
+    super(`Finish “${active.name}” first.`)
   }
 }
 
@@ -118,9 +134,16 @@ export interface Store {
   listWorkouts(fromDate: string, toDate: string): Promise<WorkoutSummary[]>
   getWorkout(id: string): Promise<Workout | null>
   createWorkout(date: string, name: string): Promise<string>
+  /** Saves name, date, notes and exercises. Status and times change only through the lifecycle calls below. */
   saveWorkout(workout: Workout): Promise<void>
   deleteWorkout(id: string): Promise<void>
-  setStatus(id: string, status: WorkoutStatus): Promise<void>
+  /** Sets the status directly. Setting "planned" clears the start and finish times (Mark not done). */
+  setStatus(id: string, status: Exclude<WorkoutStatus, 'in_progress'>): Promise<void>
+  /** Puts a planned workout in progress from now. Throws WorkoutInProgressError if another one is in progress. */
+  startWorkout(id: string): Promise<void>
+  /** Marks the workout done now. Only a started workout gets a duration. */
+  finishWorkout(id: string): Promise<void>
+  getInProgressWorkout(): Promise<{ id: string; name: string } | null>
   copyWorkout(id: string, dates: string[], options: CopyOptions): Promise<void>
   /** Active exercises whose name starts with the prefix, ordered by name then equipment. */
   searchExercises(prefix: string): Promise<Exercise[]>

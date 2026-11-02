@@ -30,6 +30,7 @@ export default function DayWorkouts({ date, today, workouts, onAdd }: Props) {
                     </span>
                   )}
                   {missed && <span className="badge">Not done</span>}
+                  {w.status === 'in_progress' && <span className="badge active">In progress</span>}
                 </span>
                 <span className="workout-counts">
                   {w.exerciseCount} {w.exerciseCount === 1 ? 'exercise' : 'exercises'} · {w.completedSetCount}/{w.setCount} sets

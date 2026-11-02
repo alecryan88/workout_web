@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { startOfWeek } from './dates'
+import { fullDate, startOfWeek } from './dates'
 import { useStore } from './store/context'
 import CopyPanel from './CopyPanel'
 import ExerciseBlock from './ExerciseBlock'
 import ExercisePicker from './ExercisePicker'
 import { moveItem, removeItem, replaceItem } from './listOps'
 import Sheet from './Sheet'
-import { DEFAULT_REST_SECONDS, type PlannedSet, type Workout, type WorkoutExercise } from './store/types'
+import {
+  DEFAULT_REST_SECONDS,
+  WorkoutInProgressError,
+  durationSeconds,
+  type PlannedSet,
+  type Workout,
+  type WorkoutExercise,
+} from './store/types'
+import { elapsed } from './time'
+import { useNow } from './useNow'
 import { useAutosave, type SaveState } from './useAutosave'
 
 const SAVE_LABELS: Record<SaveState, string> = {
@@ -32,7 +41,7 @@ function DateInput({ value, onChange }: { value: string; onChange: (value: strin
   )
 }
 
-type EditorSheet = 'none' | 'actions' | 'details' | 'copy' | 'delete'
+type EditorSheet = 'none' | 'actions' | 'details' | 'copy' | 'delete' | 'finish' | 'busy'
 
 const unticked = (values: PlannedSet) => ({ ...values, completed: false })
 
@@ -46,9 +55,13 @@ export default function WorkoutEditor() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [sheet, setSheet] = useState<EditorSheet>('none')
   const [actionError, setActionError] = useState<string | null>(null)
+  const [activeWorkout, setActiveWorkout] = useState<{ id: string; name: string } | null>(null)
   const autosave = useAutosave((w: Workout) => store.saveWorkout(w))
+  const now = useNow(workout?.status === 'in_progress')
 
   useEffect(() => {
+    setWorkout(null)
+    setSheet('none')
     store
       .getWorkout(id)
       .then((w) => {
@@ -78,11 +91,31 @@ export default function WorkoutEditor() {
     }
   }
 
-  const toggleDone = () => {
-    if (!workout) return
-    update({ status: workout.status === 'done' ? 'planned' : 'done' })
-    setTimeout(() => void autosave.flush())
+  /** Saves pending edits, runs a lifecycle change, then reloads the workout's status and times. */
+  const lifecycle = async (change: () => Promise<void>, failure: string) => {
+    setSheet('none')
+    setActionError(null)
+    try {
+      await autosave.flush()
+      await change()
+      const fresh = await store.getWorkout(id)
+      if (fresh) setWorkout(fresh)
+    } catch (e) {
+      if (e instanceof WorkoutInProgressError) {
+        setActiveWorkout(e.active)
+        setSheet('busy')
+      } else {
+        setActionError(failure)
+      }
+    }
   }
+
+  const start = () => lifecycle(() => store.startWorkout(id), 'Could not start. Check your connection.')
+  const finish = () => lifecycle(() => store.finishWorkout(id), 'Could not finish. Check your connection.')
+  const markNotDone = () => lifecycle(() => store.setStatus(id, 'planned'), 'Could not update. Check your connection.')
+
+  const untickedCount = workout ? workout.exercises.flatMap((e) => e.sets).filter((s) => !s.completed).length : 0
+  const requestFinish = () => (untickedCount > 0 ? setSheet('finish') : void finish())
 
   const copy = async (dates: string[], tickedOnly: boolean) => {
     await autosave.flush()
@@ -112,6 +145,9 @@ export default function WorkoutEditor() {
   if (!workout) return null
 
   const closeSheet = () => setSheet('none')
+  const inProgress = workout.status === 'in_progress'
+  const sinceStart = workout.startedAt ? elapsed((now - Date.parse(workout.startedAt)) / 1000) : ''
+  const duration = workout.status === 'done' ? durationSeconds(workout) : null
 
   return (
     <main className="editor">
@@ -120,16 +156,48 @@ export default function WorkoutEditor() {
           ‹ Week
         </button>
         <div className="nav-title">
-          <h1>{workout.name}</h1>
+          {inProgress && (
+            <span className="nav-timer" role="timer" aria-label="Elapsed time">
+              {sinceStart}
+            </span>
+          )}
           <span className={`save-state ${autosave.state}`} role={autosave.state === 'error' ? 'alert' : 'status'}>
             {SAVE_LABELS[autosave.state]}
           </span>
         </div>
-        <button type="button" className="link-button nav-more" aria-label="Workout actions" onClick={() => setSheet('actions')}>
-          •••
-        </button>
+        {workout.status !== 'done' ? (
+          <button type="button" className="finish" onClick={requestFinish}>
+            Finish
+          </button>
+        ) : (
+          <span />
+        )}
       </header>
 
+      <div className="title-row">
+        <h1>{workout.name}</h1>
+        <button type="button" className="chip" aria-label="Workout actions" onClick={() => setSheet('actions')}>
+          •••
+        </button>
+      </div>
+      <p className="meta-line">
+        <span aria-hidden="true">📅</span>
+        <span>{fullDate(workout.date)}</span>
+      </p>
+      {inProgress && (
+        <p className="meta-line">
+          <span aria-hidden="true">🕒</span>
+          <span className="visually-hidden">Elapsed</span>
+          <span>{sinceStart}</span>
+        </p>
+      )}
+      {duration !== null && (
+        <p className="meta-line">
+          <span aria-hidden="true">🕒</span>
+          <span className="visually-hidden">Duration</span>
+          <span>{elapsed(duration)}</span>
+        </p>
+      )}
       {workout.notes && <p className="workout-notes">{workout.notes}</p>}
 
       {actionError && <p role="alert" className="error">{actionError}</p>}
@@ -153,11 +221,13 @@ export default function WorkoutEditor() {
         onPick={(exercise) => setExercises([...workout.exercises, { exercise, restSeconds: DEFAULT_REST_SECONDS, sets: [] }])}
       />
 
-      <div className="bottom-bar">
-        <button type="button" className={workout.status === 'done' ? 'secondary' : 'primary done-button'} onClick={toggleDone}>
-          {workout.status === 'done' ? 'Mark not done' : 'Mark done'}
-        </button>
-      </div>
+      {workout.status === 'planned' && (
+        <div className="bottom-bar">
+          <button type="button" className="primary" onClick={start}>
+            Start
+          </button>
+        </div>
+      )}
 
       <Sheet open={sheet === 'actions'} title="Workout actions" onClose={closeSheet}>
         <button type="button" onClick={() => setSheet('details')}>
@@ -169,6 +239,11 @@ export default function WorkoutEditor() {
         <button type="button" onClick={saveAsTemplate}>
           Save as template
         </button>
+        {workout.status === 'done' && (
+          <button type="button" onClick={markNotDone}>
+            Mark not done
+          </button>
+        )}
         <button type="button" className="danger" onClick={() => setSheet('delete')}>
           Delete
         </button>
@@ -191,6 +266,26 @@ export default function WorkoutEditor() {
 
       <Sheet open={sheet === 'copy'} title="Copy workout" onClose={closeSheet} cancelLabel="Close">
         <CopyPanel onCopy={copy} />
+      </Sheet>
+
+      <Sheet open={sheet === 'finish'} title="Finish workout?" onClose={closeSheet}>
+        <p>
+          {untickedCount === 1 ? '1 set isn’t ticked' : `${untickedCount} sets aren’t ticked`}. Unticked sets count as not done.
+        </p>
+        <button type="button" className="finish" onClick={finish}>
+          Finish anyway
+        </button>
+      </Sheet>
+
+      <Sheet open={sheet === 'busy'} title="Workout in progress" onClose={closeSheet}>
+        {activeWorkout && (
+          <>
+            <p>Finish “{activeWorkout.name}” first. Only one workout can be in progress at a time.</p>
+            <button type="button" onClick={() => navigate(`/workout/${activeWorkout.id}`)}>
+              Open {activeWorkout.name}
+            </button>
+          </>
+        )}
       </Sheet>
 
       <Sheet open={sheet === 'delete'} title="Delete workout" onClose={closeSheet}>

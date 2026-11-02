@@ -1,5 +1,5 @@
 import { copyExercises } from './copy'
-import { DuplicateExerciseError, summaryCounts, type Exercise, type ExerciseInput, type Store, type Template, type Workout } from './types'
+import { DuplicateExerciseError, WorkoutInProgressError, summaryCounts, type Exercise, type ExerciseInput, type Store, type Template, type Workout } from './types'
 
 type Options = {
   email: string
@@ -57,20 +57,41 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
       return withCurrentExercises(structuredClone(workout))
     },
     async createWorkout(date, name) {
-      const workout: Workout = { id: id(), date, name, notes: '', status: 'planned', templateId: null, exercises: [] }
+      const workout: Workout = { id: id(), date, name, notes: '', status: 'planned', startedAt: null, finishedAt: null, templateId: null, exercises: [] }
       workouts.set(workout.id, workout)
       return workout.id
     },
     async saveWorkout(workout) {
-      if (!workouts.has(workout.id)) throw new Error('Workout not found')
-      workouts.set(workout.id, structuredClone(workout))
+      const stored = workouts.get(workout.id)
+      if (!stored) throw new Error('Workout not found')
+      const { status, startedAt, finishedAt } = stored
+      workouts.set(workout.id, { ...structuredClone(workout), status, startedAt, finishedAt })
     },
     async deleteWorkout(workoutId) {
       workouts.delete(workoutId)
     },
     async setStatus(workoutId, status) {
       const workout = workouts.get(workoutId)
-      if (workout) workout.status = status
+      if (!workout) return
+      workout.status = status
+      if (status === 'planned') Object.assign(workout, { startedAt: null, finishedAt: null })
+    },
+    async startWorkout(workoutId) {
+      const workout = workouts.get(workoutId)
+      if (!workout) throw new Error('Workout not found')
+      const active = [...workouts.values()].find((w) => w.status === 'in_progress' && w.id !== workoutId)
+      if (active) throw new WorkoutInProgressError({ id: active.id, name: active.name })
+      if (workout.status !== 'planned') return
+      Object.assign(workout, { status: 'in_progress', startedAt: new Date().toISOString(), finishedAt: null })
+    },
+    async finishWorkout(workoutId) {
+      const workout = workouts.get(workoutId)
+      if (!workout) throw new Error('Workout not found')
+      Object.assign(workout, { status: 'done', finishedAt: new Date().toISOString() })
+    },
+    async getInProgressWorkout() {
+      const active = [...workouts.values()].find((w) => w.status === 'in_progress')
+      return active ? { id: active.id, name: active.name } : null
     },
     async copyWorkout(workoutId, dates, { tickedOnly }) {
       const source = workouts.get(workoutId)
@@ -81,6 +102,8 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
           id: id(),
           date,
           status: 'planned',
+          startedAt: null,
+          finishedAt: null,
           templateId: null,
           exercises: copyExercises(source, tickedOnly),
         }
@@ -160,6 +183,8 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
           name: template.name,
           notes: template.notes,
           status: 'planned',
+          startedAt: null,
+          finishedAt: null,
           templateId,
           exercises: template.exercises.map((e) => ({
             exercise: { ...e.exercise },

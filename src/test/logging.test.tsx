@@ -70,12 +70,12 @@ describe('logging at the gym', () => {
     expect(screen.getByRole('button', { name: 'Complete Bench Press set 3' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('marks a workout done, shows it in the week, and can unmark it', async () => {
+  it('can still edit a workout after finishing it, and unmark it', async () => {
     const app = await workoutWithBench()
     const { user, screen } = app
 
-    await user.click(screen.getByRole('button', { name: 'Mark done' }))
-    expect(await screen.findByRole('button', { name: 'Mark not done' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Finish' }))
+    await user.click(screen.getByRole('button', { name: 'Finish anyway' }))
     await openWorkoutSheet(app, 'Edit details')
     await user.type(screen.getByLabelText('Notes'), 'Edited after done')
     await user.click(screen.getByRole('button', { name: 'Done' }))
@@ -86,7 +86,8 @@ describe('logging at the gym', () => {
 
     await user.click(screen.getByRole('link', { name: /Push Day/ }))
     expect(await screen.findByText('Edited after done')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Mark not done' }))
+    await openWorkoutSheet(app, 'Mark not done')
+    await screen.findByRole('button', { name: 'Start' })
     await user.click(screen.getByRole('button', { name: 'Back to week' }))
     expect(await screen.findByRole('heading', { name: "Today's workouts" })).toBeInTheDocument()
     const link = await screen.findByRole('link', { name: /Push Day/ })
