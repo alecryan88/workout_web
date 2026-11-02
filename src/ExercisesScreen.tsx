@@ -89,6 +89,7 @@ export default function ExercisesScreen() {
       {error && <p role="alert" className="error">{error}</p>}
       {message && <p role="status" className="ok">{message}</p>}
       {exercises && exercises.length === 0 && <p className="rest">No exercises yet.</p>}
+      {exercises && exercises.length > 0 && visible.length === 0 && <p className="rest">No exercises match “{query.trim()}”.</p>}
       <ul className="exercise-list" aria-label="Exercises">
         {visible.map((exercise) => (
           <li key={exercise.id}>

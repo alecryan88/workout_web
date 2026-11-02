@@ -49,6 +49,7 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
     async listWorkouts(fromDate, toDate) {
       return [...workouts.values()]
         .filter((w) => w.date >= fromDate && w.date <= toDate)
+        .sort((a, b) => a.date.localeCompare(b.date))
         .map(({ id, date, name, status, exercises }) => ({ id, date, name, status, ...summaryCounts(exercises) }))
     },
     async getWorkout(workoutId) {
@@ -87,6 +88,7 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
     async finishWorkout(workoutId) {
       const workout = workouts.get(workoutId)
       if (!workout) throw new Error('Workout not found')
+      if (workout.status === 'done') return
       Object.assign(workout, { status: 'done', finishedAt: new Date().toISOString() })
     },
     async getInProgressWorkout() {
@@ -133,6 +135,11 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
       return active().sort(byNameThenEquipment).map(publicExercise)
     },
     async createExercise(input: ExerciseInput) {
+      const archived = exercises.find((e) => e.archived && sameKey(e, input))
+      if (archived) {
+        Object.assign(archived, { ...input, name: input.name.trim(), archived: false })
+        return publicExercise(archived)
+      }
       assertUnique(input)
       const exercise = { ...input, name: input.name.trim(), id: id(), archived: false }
       exercises.push(exercise)
@@ -211,7 +218,9 @@ export function createMemoryStore({ email, password, signedIn = false }: Options
       })
     },
     async lastPerformance(exerciseId, beforeDate) {
+      // Newest first, so on a shared date the most recently created workout wins (as in SQL).
       const candidates = [...workouts.values()]
+        .reverse()
         .filter((w) => w.status === 'done' && w.date < beforeDate)
         .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
       for (const workout of candidates) {

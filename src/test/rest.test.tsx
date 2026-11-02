@@ -1,6 +1,6 @@
 import { act, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { newStore, plan, renderApp, seedWorkout, setToday, type App } from './harness'
+import { exerciseAction, newStore, plan, renderApp, seedWorkout, setToday, type App } from './harness'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -110,5 +110,18 @@ describe('rest countdown', () => {
     expect(vibrate).toHaveBeenCalledTimes(1)
     expect(countdowns(app)).toHaveLength(0)
     expect(within(app.screen.getByTestId('rest after Bench Press set 1')).getByRole('button')).toHaveTextContent('2:00')
+  })
+
+  it('stops the countdown when the resting set is unticked or removed', async () => {
+    const app = await startedPushDay()
+    const { user, screen } = app
+    await tick(app, 2)
+    await tick(app, 2)
+    expect(countdowns(app)).toHaveLength(0)
+
+    await tick(app, 2)
+    await exerciseAction(app, 'Bench Press', 'Edit sets')
+    await user.click(screen.getByRole('button', { name: 'Remove Bench Press set 1' }))
+    expect(countdowns(app)).toHaveLength(0)
   })
 })

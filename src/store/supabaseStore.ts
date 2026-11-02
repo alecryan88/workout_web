@@ -191,7 +191,7 @@ export function createSupabaseStore(url: string, key: string): Store {
     async startWorkout(id) {
       const active = await this.getInProgressWorkout()
       if (active && active.id !== id) throw new WorkoutInProgressError(active)
-      const { error } = await supabase.rpc('start_workout', { p_id: id })
+      const { error } = await supabase.rpc('start_workout', { p_id: id, p_started_at: new Date().toISOString() })
       if (error?.code === '23505') {
         const current = await this.getInProgressWorkout()
         if (current) throw new WorkoutInProgressError(current)
@@ -199,7 +199,7 @@ export function createSupabaseStore(url: string, key: string): Store {
       if (error) throw error
     },
     async finishWorkout(id) {
-      check(await supabase.rpc('finish_workout', { p_id: id }))
+      check(await supabase.rpc('finish_workout', { p_id: id, p_finished_at: new Date().toISOString() }))
     },
     async getInProgressWorkout() {
       return check<{ id: string; name: string } | null>(
@@ -234,9 +234,7 @@ export function createSupabaseStore(url: string, key: string): Store {
       return rows.map(toExercise)
     },
     async createExercise(input) {
-      return toExercise(
-        checkUnique(await supabase.from('exercises').insert(toExerciseRow(input)).select(EXERCISE_COLUMNS).single<ExerciseRow>()),
-      )
+      return toExercise(checkUnique(await supabase.rpc('create_exercise', { payload: toExerciseRow(input) }).single<ExerciseRow>()))
     },
     async updateExercise(exercise) {
       checkUnique(await supabase.from('exercises').update(toExerciseRow(exercise)).eq('id', exercise.id))

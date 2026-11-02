@@ -126,6 +126,33 @@ describe('exercise library', () => {
   })
 })
 
+describe('re-creating an archived exercise', () => {
+  it('restores it with the new details instead of reporting a duplicate', async () => {
+    setToday('2026-11-04')
+    const store = newStore()
+    await seedWorkout(store, { date: '2026-11-04', name: 'Push Day', exercises: { Dips: [plan(10)] } })
+    const app = await openExercises(store)
+    const { user, screen } = app
+
+    await user.click(screen.getByRole('button', { name: 'Dips' }))
+    await user.click(screen.getByRole('button', { name: 'Delete exercise' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
+    expect(listed(app)).toEqual([])
+
+    await createExercise(app, { name: 'dips', muscle: 'Chest' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(listed(app)).toEqual(['dips'])
+  })
+
+  it('says when a search matches nothing', async () => {
+    const store = newStore()
+    await store.findOrCreateExercise('Dips')
+    const app = await openExercises(store)
+    await app.user.type(app.screen.getByLabelText('Search exercises'), 'zzz')
+    expect(app.screen.getByText('No exercises match “zzz”.')).toBeInTheDocument()
+  })
+})
+
 describe('exercises in the workout screen', () => {
   it('chooses between variants in the picker and labels bodyweight weight as +lbs', async () => {
     setToday('2026-11-04')

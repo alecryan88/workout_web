@@ -48,6 +48,10 @@ type Rest = { exerciseIndex: number; setIndex: number; endsAt: number }
 
 const REST_ADJUST_MS = 15_000
 
+/** The countdown belongs to one ticked set: it stops if that set is unticked or the sets are added to or removed. */
+const restingSetChanged = (before: WorkoutExercise, after: WorkoutExercise, setIndex: number) =>
+  before.sets.length !== after.sets.length || !after.sets[setIndex]?.completed
+
 function vibrate() {
   if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate([200, 100, 200])
 }
@@ -130,7 +134,11 @@ export default function WorkoutEditor() {
       await autosave.flush()
       await change()
       const fresh = await store.getWorkout(id)
-      if (fresh) setWorkout(fresh)
+      // Take only the lifecycle fields so edits typed while waiting aren't overwritten.
+      if (fresh) {
+        const { status, startedAt, finishedAt } = fresh
+        setWorkout((current) => current && { ...current, status, startedAt, finishedAt })
+      }
     } catch (e) {
       if (e instanceof WorkoutInProgressError) {
         setActiveWorkout(e.active)
@@ -252,7 +260,10 @@ export default function WorkoutEditor() {
           makeSet={unticked}
           isFirst={i === 0}
           isLast={i === workout.exercises.length - 1}
-          onChange={(changed) => setExercises(replaceItem(workout.exercises, i, changed))}
+          onChange={(changed) => {
+            if (rest?.exerciseIndex === i && restingSetChanged(entry, changed, rest.setIndex)) setRest(null)
+            setExercises(replaceItem(workout.exercises, i, changed))
+          }}
           onRemove={() => {
             setRest(null)
             setExercises(removeItem(workout.exercises, i))

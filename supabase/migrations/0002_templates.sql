@@ -205,6 +205,33 @@ begin
 end;
 $$;
 
+-- Creates an exercise. Re-creating an archived one restores it with the new details;
+-- clashing with an active one raises a unique violation (23505).
+create function public.create_exercise(payload jsonb)
+returns public.exercises
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  result exercises;
+begin
+  insert into exercises (name, equipment, muscle_group, notes)
+  values (trim(payload ->> 'name'), payload ->> 'equipment', payload ->> 'muscle_group', payload ->> 'notes')
+  on conflict ((lower(name)), equipment) do update
+    set name = excluded.name, muscle_group = excluded.muscle_group, notes = excluded.notes, archived_at = null
+    where exercises.archived_at is not null
+  returning * into result;
+  if result.id is null then
+    raise exception 'An exercise with that name and equipment already exists' using errcode = '23505';
+  end if;
+  return result;
+end;
+$$;
+
+revoke execute on function public.create_exercise(jsonb) from public, anon;
+grant execute on function public.create_exercise(jsonb) to authenticated;
+
 revoke execute on function public.delete_or_archive_exercise(uuid) from public, anon;
 grant execute on function public.delete_or_archive_exercise(uuid) to authenticated;
 
@@ -393,7 +420,8 @@ alter table public.workouts
 -- At most one workout in progress.
 create unique index workouts_one_in_progress on public.workouts ((true)) where status = 'in_progress';
 
-create function public.start_workout(p_id uuid)
+-- Times come from the client so the elapsed timer (client clock) isn't skewed by the server clock.
+create function public.start_workout(p_id uuid, p_started_at timestamptz)
 returns void
 language plpgsql
 security invoker
@@ -401,27 +429,32 @@ set search_path = public
 as $$
 begin
   update workouts
-  set status = 'in_progress', started_at = now(), finished_at = null, updated_at = now()
+  set status = 'in_progress', started_at = p_started_at, finished_at = null, updated_at = now()
   where id = p_id and status = 'planned';
 end;
 $$;
 
 -- Duration is finished_at - started_at; a workout finished without Start has no started_at.
-create function public.finish_workout(p_id uuid)
+-- Finishing a done workout again keeps its original finish time.
+create function public.finish_workout(p_id uuid, p_finished_at timestamptz)
 returns void
 language plpgsql
 security invoker
 set search_path = public
 as $$
 begin
-  update workouts set status = 'done', finished_at = now(), updated_at = now() where id = p_id;
+  update workouts
+  set status = 'done',
+      finished_at = case when status = 'done' then finished_at else p_finished_at end,
+      updated_at = now()
+  where id = p_id;
   if not found then
     raise exception 'Workout not found';
   end if;
 end;
 $$;
 
-revoke execute on function public.start_workout(uuid) from public, anon;
-revoke execute on function public.finish_workout(uuid) from public, anon;
-grant execute on function public.start_workout(uuid) to authenticated;
-grant execute on function public.finish_workout(uuid) to authenticated;
+revoke execute on function public.start_workout(uuid, timestamptz) from public, anon;
+revoke execute on function public.finish_workout(uuid, timestamptz) from public, anon;
+grant execute on function public.start_workout(uuid, timestamptz) to authenticated;
+grant execute on function public.finish_workout(uuid, timestamptz) to authenticated;
