@@ -1,16 +1,19 @@
 :root {
-  --bg: #f2f2f7;
+  --bg: #f4f5f7;
   --card: #ffffff;
-  --fill: #e9e9ee;
-  --separator: #d8d8de;
-  --text: #000000;
-  --text-secondary: #8a8a8e;
-  --accent: #3478f6;
+  --fill: #e7e9ed;
+  --well: #e4e7ec;
+  --separator: #d5d8de;
+  --text: #111418;
+  --text-secondary: #7b818a;
+  --text-tertiary: #a9aeb5;
+  --accent: #2f80ed;
+  --accent-tint: #dce9fb;
   --on-accent: #ffffff;
-  --done: #34c759;
-  --done-tint: #e8f8ec;
-  --missed: #aeaeb2;
-  --danger: #ff3b30;
+  --done: #34b853;
+  --done-tint: #dff3e4;
+  --missed: #aeb2b8;
+  --danger: #e5372d;
   --backdrop: rgba(0, 0, 0, 0.4);
   --radius: 12px;
   --radius-card: 18px;
@@ -30,18 +33,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #000000;
-    --card: #1c1c1e;
-    --fill: #2c2c2e;
-    --separator: #38383a;
+    --bg: #2a2e35;
+    --card: #33383f;
+    --fill: #3b4048;
+    --well: #1e2126;
+    --separator: #41464e;
     --text: #ffffff;
-    --text-secondary: #98989f;
-    --accent: #0a84ff;
+    --text-secondary: #9ba1a9;
+    --text-tertiary: #646a72;
+    --accent: #4fa3f7;
+    --accent-tint: #33475f;
     --on-accent: #ffffff;
-    --done: #30d158;
-    --done-tint: #13301c;
-    --missed: #636366;
-    --danger: #ff453a;
+    --done: #62c973;
+    --done-tint: #2b4433;
+    --missed: #686d75;
+    --danger: #ff5c52;
     --backdrop: rgba(0, 0, 0, 0.6);
   }
 }
@@ -108,6 +114,13 @@ button.primary {
   font-weight: 600;
 }
 
+button.done-button,
+button.finish {
+  background: var(--done);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
 button.danger {
   color: var(--danger);
 }
@@ -138,8 +151,8 @@ textarea {
   min-height: var(--tap);
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid var(--separator);
-  background: var(--card);
+  border: 1px solid transparent;
+  background: var(--well);
   color: var(--text);
 }
 
@@ -247,7 +260,7 @@ label.checkbox input {
   min-height: 0;
   padding: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--accent);
   font-weight: 600;
   text-align: left;
 }
@@ -630,6 +643,18 @@ button.add-workout {
   font-weight: 600;
 }
 
+button.chip,
+.exercise-tools button.icon {
+  min-height: 36px;
+  min-width: 48px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+}
+
 .exercise-body {
   margin-top: 12px;
 }
@@ -693,7 +718,7 @@ button.add-exercise {
   padding: 8px 4px;
   text-align: center;
   min-width: 0;
-  background: var(--fill);
+  background: var(--well);
   border-color: transparent;
 }
 
